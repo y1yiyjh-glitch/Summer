@@ -274,25 +274,9 @@
   <div id="app"><div class="loading">불러오는 중...</div></div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script>
-/* ═══════════════════ ① 설정 (여기만 수정하세요) ═══════════════════ */
-
-const TEACHER_PIN = "21232123";   // 선생님 접속 비밀번호 (원하는 번호로 수정)
-
-// ★ Firebase 콘솔에서 복사한 firebaseConfig를 아래에 붙여넣으세요 ★
-const firebaseConfig = {
- apiKey: "AIzaSyCBgz3oLm_dgKBFwGglidasKoENI5PNs7I",
-  authDomain: "summer-vacation-mission.firebaseapp.com",
-  databaseURL: "https://summer-vacation-mission-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "summer-vacation-mission",
-  storageBucket: "summer-vacation-mission.firebasestorage.app",
-  messagingSenderId: "171875205794",
-  appId: "1:171875205794:web:a5cca666fedc22c2b5cdfb",
-  measurementId: "G-H9QZ9NXR39"
-};
-
+/* ─────────── 설정 ─────────── */
+const TEACHER_PIN = "2026";   // 선생님 접속 비밀번호 (원하는 번호로 수정하세요)
 const MISSIONS = [
   "여름에 볼 수 있는 식물(곤충) 관찰, 조사하기",
   "음식을 만들고 그림(사진)이 들어간 보고서 쓰기",
@@ -306,73 +290,53 @@ const MISSIONS = [
 ];
 // 상태: none(미시작) / pending(제출·확인중) / hold(보류) / passed(통과)
 
-/* ═══════════════════ ② Firebase 초기화 ═══════════════════ */
-let db = null;
-try{
-  firebase.initializeApp(firebaseConfig);
-  db = firebase.database();
-}catch(e){ console.error(e); }
+/* ─────────── 저장소 도우미 ─────────── */
+async function sGet(key){
+  try{ const r = await window.storage.get(key, true); return r ? JSON.parse(r.value) : null; }
+  catch(e){ return null; }
+}
+async function sSet(key, val){
+  try{ await window.storage.set(key, JSON.stringify(val), true); return true; }
+  catch(e){ console.error(e); return false; }
+}
+function keyFor(name){ return "bingo-student:" + name.replace(/\s+/g,""); }
 
-const ROOT = "bingo";
-function safeKey(name){ return name.replace(/[.#$\[\]\/\s]/g, ""); }
-function normalize(name, v){
-  const st = Array(9).fill("none");
-  if(v && v.statuses){ for(let i=0;i<9;i++){ if(v.statuses[i]) st[i] = v.statuses[i]; } }
-  return { name, statuses: st, reflection: (v && v.reflection) || null, updatedAt: (v && v.updatedAt) || 0 };
+async function getStudentList(){ return (await sGet("bingo-students")) || []; }
+async function addStudent(name){
+  const list = await getStudentList();
+  if(!list.includes(name)){ list.push(name); await sSet("bingo-students", list); }
 }
 async function getStudentData(name){
-  const snap = await db.ref(`${ROOT}/students/${safeKey(name)}`).get();
-  return normalize(name, snap.val());
+  return (await sGet(keyFor(name))) || { statuses: Array(9).fill("none"), updatedAt: 0 };
 }
 async function setStudentData(name, data){
   data.updatedAt = Date.now();
-  data.name = name;
-  await db.ref(`${ROOT}/students/${safeKey(name)}`).set(data);
+  return sSet(keyFor(name), data);
 }
+async function getLinks(){ return (await sGet("bingo-links")) || {}; }
 
-/* ─── 실시간 리스너 관리 ─── */
-let listeners = [];
-function listen(path, cb){
-  const ref = db.ref(path);
-  const h = ref.on("value", snap => cb(snap.val()), err => console.error(err));
-  listeners.push(() => ref.off("value", h));
-}
-function clearListeners(){ listeners.forEach(off => off()); listeners = []; }
-
-/* ═══════════════════ ③ 공통 ═══════════════════ */
+/* ─────────── 공통 ─────────── */
 const app = document.getElementById("app");
 let currentName = null;
+let pollTimer = null;
 
 function toast(msg){
   const t = document.createElement("div");
   t.className = "toast"; t.textContent = msg;
   document.body.appendChild(t);
-  setTimeout(() => t.remove(), 2200);
+  setTimeout(()=>t.remove(), 2200);
 }
-function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function stopPoll(){ if(pollTimer){ clearInterval(pollTimer); pollTimer = null; } }
+function esc(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
 function countBingo(statuses){
   const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
   return lines.filter(l => l.every(i => statuses[i] === "passed")).length;
 }
-function overlayOpen(){ return !!document.querySelector(".overlay"); }
 
-/* ═══════════════════ ④ 로그인 화면 ═══════════════════ */
+/* ─────────── 로그인 화면 ─────────── */
 function renderLogin(){
-  clearListeners(); currentName = null;
-
-  if(!db || firebaseConfig.apiKey.includes("붙여넣기")){
-    app.innerHTML = `
-      <div class="login-card">
-        <h2>⚙️ 설정이 필요해요</h2>
-        <p style="font-size:14px;color:#6B8AA6;line-height:1.7;word-break:keep-all;">
-          아직 Firebase 설정이 되지 않았어요.<br>
-          HTML 파일을 열어 <b>firebaseConfig</b> 부분에<br>
-          Firebase 콘솔에서 복사한 값을 붙여넣어 주세요.
-        </p>
-      </div>`;
-    return;
-  }
-
+  stopPoll(); currentName = null;
   app.innerHTML = `
     <div class="login-card">
       <h2>이름을 입력하고 시작해요!</h2>
@@ -384,7 +348,7 @@ function renderLogin(){
     </div>`;
   const input = document.getElementById("nameInput");
   const go = () => {
-    const name = input.value.trim().replace(/\s+/g, "");
+    const name = input.value.trim().replace(/\s+/g,"");
     if(!name){ toast("이름을 입력해 주세요!"); return; }
     if(name.length < 2){ toast("이름을 정확히 입력해 주세요!"); return; }
     enterStudent(name);
@@ -395,49 +359,37 @@ function renderLogin(){
   input.focus();
 }
 
-/* ═══════════════════ ⑤ 학생 화면 (실시간) ═══════════════════ */
-let sData = null, sLinks = {};
-
-function enterStudent(name){
-  clearListeners();
+/* ─────────── 학생 화면 ─────────── */
+async function enterStudent(name){
   currentName = name;
-  sData = null; sLinks = {};
-  app.innerHTML = `<div class="loading">빙고판을 불러오는 중...</div>`;
-
-  listen(`${ROOT}/students/${safeKey(name)}`, v => {
-    if(currentName !== name) return;
-    if(!v){
-      // 처음 접속한 학생 → 자동 등록
-      setStudentData(name, normalize(name, null));
-      return;
-    }
-    sData = normalize(name, v);
-    if(!overlayOpen()) renderStudent();
-  });
-  listen(`${ROOT}/links`, v => {
-    if(currentName !== name) return;
-    sLinks = v || {};
-    if(sData && !overlayOpen()) renderStudent();
-  });
+  await addStudent(name);
+  await renderStudent();
+  stopPoll();
+  pollTimer = setInterval(async () => {
+    if(currentName && !document.querySelector(".overlay")) await renderStudent(true);
+  }, 15000);
 }
 
-function renderStudent(){
-  const data = sData, links = sLinks;
+async function renderStudent(silent){
+  if(!silent) app.innerHTML = `<div class="loading">빙고판을 불러오는 중...</div>`;
+  const data = await getStudentData(currentName);
+  const links = await getLinks();
   const bingo = countBingo(data.statuses);
-  const passedCount = data.statuses.filter(s => s === "passed").length;
+  const passedCount = data.statuses.filter(s=>s==="passed").length;
 
-  const cells = MISSIONS.map((m, i) => {
+  const cells = MISSIONS.map((m,i)=>{
     const st = data.statuses[i];
     const color = (i % 2 === 0) ? "blue" : "cream";
     let badge = "", stamp = "";
-    if(st === "pending") badge = `<span class="badge pending">확인 중</span>`;
-    if(st === "hold")    badge = `<span class="badge hold">보류</span>`;
-    if(st === "passed")  stamp = `<div class="stamp"><span>통과</span></div>`;
-    return `<div class="cell ${color} ${st !== "none" ? st : ""}" data-i="${i}" role="button" tabindex="0">
+    if(st==="pending") badge = `<span class="badge pending">확인 중</span>`;
+    if(st==="hold")    badge = `<span class="badge hold">보류</span>`;
+    if(st==="passed")  stamp = `<div class="stamp"><span>통과</span></div>`;
+    return `<div class="cell ${color} ${st!=="none"?st:""}" data-i="${i}" role="button" tabindex="0">
       ${badge}${esc(m)}${stamp}
     </div>`;
   }).join("");
 
+  // 소감문 카드 (빙고 2줄 이상 완성 시 잠금 해제)
   let reflectHtml = "";
   if(bingo >= 2){
     if(data.reflection && data.reflection.text){
@@ -467,7 +419,7 @@ function renderStudent(){
     <div class="topbar">
       <span class="who">🙋 ${esc(currentName)}</span>
       <div class="actions">
-        <span class="mini-btn" style="cursor:default;background:#EAF7EF;border-color:#BEE3CC;color:#2E9E5B;">🟢 실시간</span>
+        <button class="mini-btn" id="refreshBtn">🔄 새로고침</button>
         <button class="mini-btn" id="logoutBtn">나가기</button>
       </div>
     </div>
@@ -478,11 +430,12 @@ function renderStudent(){
   const reflectBtn = document.getElementById("reflectBtn");
   if(reflectBtn) reflectBtn.onclick = () => openReflection(data);
 
+  document.getElementById("refreshBtn").onclick = () => { renderStudent(); toast("최신 상태로 새로고침했어요!"); };
   document.getElementById("logoutBtn").onclick = renderLogin;
-  app.querySelectorAll(".cell").forEach(c => {
-    const open = () => openMission(parseInt(c.dataset.i));
+  app.querySelectorAll(".cell").forEach(c=>{
+    const open = () => openMission(parseInt(c.dataset.i), data, links);
     c.onclick = open;
-    c.onkeydown = e => { if(e.key === "Enter" || e.key === " "){ e.preventDefault(); open(); } };
+    c.onkeydown = e => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); open(); } };
   });
 }
 
@@ -502,7 +455,7 @@ function openReflection(data){
       </div>
     </div>`;
   document.body.appendChild(ov);
-  const close = () => { ov.remove(); if(sData) renderStudent(); };
+  const close = () => ov.remove();
   ov.querySelector(".close-x").onclick = close;
   ov.addEventListener("click", e => { if(e.target === ov) close(); });
 
@@ -518,29 +471,28 @@ function openReflection(data){
     fresh.reflection = { text, savedAt: Date.now() };
     await setStudentData(currentName, fresh);
     close(); toast("소감문을 제출했어요! 참 잘했어요 🌟");
+    renderStudent();
   };
 }
 
-function openMission(i){
-  const st = sData.statuses[i];
-  const link = sLinks[i];
-  let statusHtml = "", submitBtn = "";
+function openMission(i, data, links){
+  const st = data.statuses[i];
+  const link = links[i];
+  let statusHtml = "";
 
-  if(st === "none"){
-    statusHtml = `<div class="status-line">아직 시작하지 않은 미션이에요.<br><b>과제방에 들어가서</b> 미션을 수행하고, 다 했으면 아래 <b>제출 버튼</b>을 눌러 주세요!</div>`;
-    submitBtn = `<button class="btn btn-primary" id="submitBtn" style="flex:1;min-width:120px;margin:0;">미션 제출하기 📮</button>`;
-  } else if(st === "pending"){
+  if(st==="none"){
+    statusHtml = `<div class="status-line">아직 시작하지 않은 미션이에요.<br><b>과제방에 들어가서</b> 미션을 수행하고 제출해 주세요!</div>`;
+  } else if(st==="pending"){
     statusHtml = `<div class="status-line">📮 제출 완료! 선생님이 확인하고 있어요.<br>조금만 기다려 주세요.</div>`;
-  } else if(st === "hold"){
-    statusHtml = `<div class="status-line hold-msg">😢 <b>보류</b>되었어요. 과제방에서 미션을 보완한 뒤 다시 제출해 주세요!</div>`;
-    submitBtn = `<button class="btn btn-primary" id="submitBtn" style="flex:1;min-width:120px;margin:0;">다시 제출하기 📮</button>`;
+  } else if(st==="hold"){
+    statusHtml = `<div class="status-line hold-msg">😢 <b>보류</b>되었어요. 과제방에서 미션을 보완해 다시 제출해 주세요!</div>`;
   } else {
     statusHtml = `<div class="status-line pass-msg">🎉 <b>통과!</b> 미션 성공! 정말 잘했어요!</div>`;
   }
 
   const linkBtn = link
     ? `<a href="${esc(link)}" target="_blank" rel="noopener" style="text-decoration:none;flex:1;min-width:120px;"><button class="btn btn-navy" style="width:100%;">과제방 들어가기 🚪</button></a>`
-    : `<button class="btn btn-outline" disabled style="opacity:.55;cursor:default;flex:1;min-width:120px;">과제방 준비 중이에요 🔧</button>`;
+    : `<button class="btn btn-outline" disabled style="opacity:.55;cursor:default;">과제방 준비 중이에요 🔧</button>`;
 
   const ov = document.createElement("div");
   ov.className = "overlay";
@@ -549,26 +501,17 @@ function openMission(i){
       <button class="close-x" aria-label="닫기">✕</button>
       <h3>미션 ${i+1}. ${esc(MISSIONS[i])}</h3>
       ${statusHtml}
-      <div class="btn-row">${linkBtn}${submitBtn}</div>
+      <div class="btn-row">${linkBtn}</div>
     </div>`;
   document.body.appendChild(ov);
-  const close = () => { ov.remove(); if(sData) renderStudent(); };
+  const close = () => ov.remove();
   ov.querySelector(".close-x").onclick = close;
   ov.addEventListener("click", e => { if(e.target === ov) close(); });
-
-  const sb = ov.querySelector("#submitBtn");
-  if(sb) sb.onclick = async () => {
-    sb.disabled = true;
-    const fresh = await getStudentData(currentName);
-    fresh.statuses[i] = "pending";
-    await setStudentData(currentName, fresh);
-    close(); toast(`미션 ${i+1}을(를) 제출했어요! 📮`);
-  };
 }
 
-/* ═══════════════════ ⑥ 교사 로그인 ═══════════════════ */
+/* ─────────── 교사 로그인 ─────────── */
 function renderTeacherLogin(){
-  clearListeners(); currentName = null;
+  stopPoll(); currentName = null;
   app.innerHTML = `
     <div class="login-card">
       <h2>👩‍🏫 선생님 확인</h2>
@@ -579,143 +522,136 @@ function renderTeacherLogin(){
   const input = document.getElementById("pinInput");
   const go = () => {
     if(input.value === TEACHER_PIN){ renderTeacher(); }
-    else { toast("비밀번호가 달라요!"); input.value = ""; }
+    else { toast("비밀번호가 달라요!"); input.value=""; }
   };
   document.getElementById("pinBtn").onclick = go;
-  input.addEventListener("keydown", e => { if(e.key === "Enter") go(); });
+  input.addEventListener("keydown", e => { if(e.key==="Enter") go(); });
   document.getElementById("backBtn").onclick = renderLogin;
   input.focus();
 }
 
-/* ═══════════════════ ⑦ 교사 대시보드 (실시간) ═══════════════════ */
-function renderTeacher(){
-  clearListeners();
-  let tStudents = {};   // { safeKey: data }
-  let tLinks = {};
-  let linksRendered = false;
+/* ─────────── 교사 대시보드 ─────────── */
+async function renderTeacher(){
+  stopPoll();
+  app.innerHTML = `<div class="loading">학생 자료를 불러오는 중...</div>`;
+  const students = await getStudentList();
+  const links = await getLinks();
+  const all = {};
+  for(const name of students){ all[name] = await getStudentData(name); }
+
+  // 확인 대기 목록
+  const pendingItems = [];
+  for(const name of students){
+    all[name].statuses.forEach((st,i)=>{
+      if(st==="pending") pendingItems.push({name, i});
+    });
+  }
+  const pendingHtml = pendingItems.length
+    ? pendingItems.map(p => `
+      <div class="review-item">
+        <div class="r-name">🙋 ${esc(p.name)}</div>
+        <div class="r-mission">미션 ${p.i+1}. ${esc(MISSIONS[p.i])}</div>
+        <div class="r-btns">
+          <button class="btn btn-green" data-act="passed" data-name="${esc(p.name)}" data-i="${p.i}">✅ 통과</button>
+          <button class="btn btn-primary" data-act="hold" data-name="${esc(p.name)}" data-i="${p.i}" style="margin:0;">↩️ 보류</button>
+        </div>
+      </div>`).join("")
+    : `<div class="empty-msg">지금 확인할 제출이 없어요 ☕</div>`;
+
+  // 학생별 현황
+  const rowsHtml = students.length
+    ? students.map(name => {
+        const st = all[name].statuses;
+        const dots = st.map(s => `<span class="dot ${s==="passed"?"p":s==="pending"?"w":s==="hold"?"h":""}" title="${s}"></span>`).join("");
+        return `<div class="student-row">
+          <span><b>${esc(name)}</b> · ${countBingo(st)}빙고 (${st.filter(x=>x==="passed").length}/9)${all[name].reflection && all[name].reflection.text ? " 📝" : ""}</span>
+          <span class="dots">${dots}</span>
+        </div>`;
+      }).join("")
+    : `<div class="empty-msg">아직 접속한 학생이 없어요.</div>`;
+
+  // 과제방 링크 설정
+  const linkRows = MISSIONS.map((m,i)=>`
+    <div class="link-row">
+      <span class="l-name">${i+1}. ${esc(m.length>14 ? m.slice(0,14)+"…" : m)}</span>
+      <input type="url" data-link-i="${i}" placeholder="과제방 링크 (https://...)" value="${links[i]?esc(links[i]):""}">
+    </div>`).join("");
+
+  // 소감문 목록
+  const reflections = students
+    .filter(n => all[n].reflection && all[n].reflection.text)
+    .map(n => ({ name: n, ...all[n].reflection }))
+    .sort((a,b) => b.savedAt - a.savedAt);
+  const reflectListHtml = reflections.length
+    ? reflections.map(r => `
+      <div class="reflect-item">
+        <div class="r-name">🙋 ${esc(r.name)}</div>
+        <div class="r-text">${esc(r.text)}</div>
+        <div class="r-date">${new Date(r.savedAt).toLocaleString("ko-KR")} 제출</div>
+      </div>`).join("")
+    : `<div class="empty-msg">아직 제출된 소감문이 없어요.</div>`;
 
   app.innerHTML = `
     <div class="topbar">
       <span class="who">👩‍🏫 선생님 화면</span>
       <div class="actions">
-        <span class="mini-btn" style="cursor:default;background:#EAF7EF;border-color:#BEE3CC;color:#2E9E5B;">🟢 실시간</span>
+        <button class="mini-btn" id="refreshBtn">🔄 새로고침</button>
         <button class="mini-btn" id="logoutBtn">나가기</button>
       </div>
     </div>
     <div class="section">
-      <h3 id="pendingTitle">📮 확인 대기 중인 제출 (0)</h3>
-      <div id="pendingBox"><div class="empty-msg">불러오는 중...</div></div>
+      <h3>📮 확인 대기 중인 제출 (${pendingItems.length})</h3>
+      ${pendingHtml}
     </div>
     <div class="section">
-      <h3 id="rowsTitle">📊 학생별 현황 (0명)</h3>
+      <h3>📊 학생별 현황 (${students.length}명)</h3>
       <div style="font-size:11.5px;color:#8AA5BD;margin-bottom:8px;">
         ■ 초록=통과 · 노랑=확인 대기 · 빨강=보류 · 회색=미시작 (왼쪽부터 미션 1~9)
       </div>
-      <div id="rowsBox"><div class="empty-msg">불러오는 중...</div></div>
+      ${rowsHtml}
     </div>
     <div class="section">
-      <h3 id="reflectTitle">📝 학생 소감문 (0)</h3>
-      <div id="reflectBox"><div class="empty-msg">불러오는 중...</div></div>
+      <h3>📝 학생 소감문 (${reflections.length})</h3>
+      ${reflectListHtml}
     </div>
     <div class="section">
       <h3>🔗 과제방 링크 연결</h3>
       <div style="font-size:12px;color:#8AA5BD;margin-bottom:10px;">각 과제방을 만든 뒤 링크를 붙여 넣고 저장하면, 학생 화면의 "과제방 들어가기" 버튼이 열려요.</div>
-      <div id="linksBox"></div>
+      ${linkRows}
       <button class="btn btn-navy" id="saveLinksBtn" style="width:100%;margin-top:6px;">링크 저장하기</button>
     </div>`;
 
+  document.getElementById("refreshBtn").onclick = () => { renderTeacher(); };
   document.getElementById("logoutBtn").onclick = renderLogin;
 
-  function paintStudents(){
-    const entries = Object.entries(tStudents).map(([k, v]) => normalize(v.name || k, v));
-
-    // 확인 대기 목록
-    const pendingItems = [];
-    entries.forEach(d => d.statuses.forEach((st, i) => { if(st === "pending") pendingItems.push({ name: d.name, i }); }));
-    document.getElementById("pendingTitle").textContent = `📮 확인 대기 중인 제출 (${pendingItems.length})`;
-    document.getElementById("pendingBox").innerHTML = pendingItems.length
-      ? pendingItems.map(p => `
-        <div class="review-item">
-          <div class="r-name">🙋 ${esc(p.name)}</div>
-          <div class="r-mission">미션 ${p.i+1}. ${esc(MISSIONS[p.i])}</div>
-          <div class="r-btns">
-            <button class="btn btn-green" data-act="passed" data-name="${esc(p.name)}" data-i="${p.i}">✅ 통과</button>
-            <button class="btn btn-primary" data-act="hold" data-name="${esc(p.name)}" data-i="${p.i}" style="margin:0;">↩️ 보류</button>
-          </div>
-        </div>`).join("")
-      : `<div class="empty-msg">지금 확인할 제출이 없어요 ☕</div>`;
-
-    // 학생별 현황
-    document.getElementById("rowsTitle").textContent = `📊 학생별 현황 (${entries.length}명)`;
-    document.getElementById("rowsBox").innerHTML = entries.length
-      ? entries.map(d => {
-          const dots = d.statuses.map(s => `<span class="dot ${s==="passed"?"p":s==="pending"?"w":s==="hold"?"h":""}" title="${s}"></span>`).join("");
-          return `<div class="student-row">
-            <span><b>${esc(d.name)}</b> · ${countBingo(d.statuses)}빙고 (${d.statuses.filter(x=>x==="passed").length}/9)${d.reflection && d.reflection.text ? " 📝" : ""}</span>
-            <span class="dots">${dots}</span>
-          </div>`;
-        }).join("")
-      : `<div class="empty-msg">아직 접속한 학생이 없어요.</div>`;
-
-    // 소감문
-    const reflections = entries
-      .filter(d => d.reflection && d.reflection.text)
-      .map(d => ({ name: d.name, ...d.reflection }))
-      .sort((a, b) => b.savedAt - a.savedAt);
-    document.getElementById("reflectTitle").textContent = `📝 학생 소감문 (${reflections.length})`;
-    document.getElementById("reflectBox").innerHTML = reflections.length
-      ? reflections.map(r => `
-        <div class="reflect-item">
-          <div class="r-name">🙋 ${esc(r.name)}</div>
-          <div class="r-text">${esc(r.text)}</div>
-          <div class="r-date">${new Date(r.savedAt).toLocaleString("ko-KR")} 제출</div>
-        </div>`).join("")
-      : `<div class="empty-msg">아직 제출된 소감문이 없어요.</div>`;
-
-    // 통과/보류 버튼
-    app.querySelectorAll("[data-act]").forEach(btn => {
-      btn.onclick = async () => {
-        const name = btn.dataset.name, i = parseInt(btn.dataset.i), act = btn.dataset.act;
-        btn.disabled = true;
-        const d = await getStudentData(name);
-        if(d.statuses[i] === "pending"){
-          d.statuses[i] = act;
-          await setStudentData(name, d);
-          toast(act === "passed" ? `${name} 미션 ${i+1} 통과 처리!` : `${name} 미션 ${i+1} 보류 처리`);
-        }
-      };
-    });
-  }
-
-  function paintLinks(){
-    document.getElementById("linksBox").innerHTML = MISSIONS.map((m, i) => `
-      <div class="link-row">
-        <span class="l-name">${i+1}. ${esc(m.length > 14 ? m.slice(0,14) + "…" : m)}</span>
-        <input type="url" data-link-i="${i}" placeholder="과제방 링크 (https://...)" value="${tLinks[i] ? esc(tLinks[i]) : ""}">
-      </div>`).join("");
-  }
-
-  listen(`${ROOT}/students`, v => { tStudents = v || {}; paintStudents(); });
-  listen(`${ROOT}/links`, v => {
-    tLinks = v || {};
-    // 입력 중 덮어쓰지 않도록, 링크 입력칸은 처음 한 번만 채움
-    if(!linksRendered){ paintLinks(); linksRendered = true; }
+  app.querySelectorAll("[data-act]").forEach(btn=>{
+    btn.onclick = async () => {
+      const name = btn.dataset.name, i = parseInt(btn.dataset.i), act = btn.dataset.act;
+      btn.disabled = true;
+      const d = await getStudentData(name);
+      if(d.statuses[i] === "pending"){
+        d.statuses[i] = act;
+        await setStudentData(name, d);
+        toast(act==="passed" ? `${name} 미션 ${i+1} 통과 처리!` : `${name} 미션 ${i+1} 보류 처리`);
+      }
+      renderTeacher();
+    };
   });
-  // links 노드가 아예 없으면 리스너가 null을 주므로 최초 1회 강제 렌더
-  setTimeout(() => { if(!linksRendered){ paintLinks(); linksRendered = true; } }, 1500);
 
   document.getElementById("saveLinksBtn").onclick = async () => {
     const newLinks = {};
-    app.querySelectorAll("[data-link-i]").forEach(inp => {
+    app.querySelectorAll("[data-link-i]").forEach(inp=>{
       const v = inp.value.trim();
       if(v) newLinks[inp.dataset.linkI] = v;
     });
-    await db.ref(`${ROOT}/links`).set(newLinks);
+    await sSet("bingo-links", newLinks);
     toast("과제방 링크를 저장했어요!");
   };
+
+  pollTimer = setInterval(()=>{ if(!document.querySelector(".overlay")) renderTeacher(); }, 20000);
 }
 
-/* ═══════════════════ 시작 ═══════════════════ */
+/* ─────────── 시작 ─────────── */
 renderLogin();
 </script>
 </body>
