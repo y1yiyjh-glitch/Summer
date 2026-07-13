@@ -220,6 +220,15 @@
     font-family:inherit;
   }
   .empty-msg{font-size:14px;color:#8AA5BD;text-align:center;padding:14px 0;}
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:var(--navy);color:#fff;padding:11px 22px;border-radius:999px;
+    font-size:14px;z-index:100;box-shadow:0 4px 14px rgba(0,0,0,.25);
+    animation:pop .2s;
+  }
+  @keyframes pop{from{opacity:0;transform:translateX(-50%) translateY(8px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+  .hidden{display:none;}
+  .loading{text-align:center;padding:40px 0;font-family:'Jua',sans-serif;color:var(--navy);}
 
   /* ── 소감문 ── */
   .reflect-card{
@@ -253,15 +262,11 @@
   .reflect-item .r-name{font-family:'Jua',sans-serif;color:var(--navy);font-size:15px;margin-bottom:6px;}
   .reflect-item .r-text{font-size:13.5px;line-height:1.7;white-space:pre-wrap;word-break:break-word;}
   .reflect-item .r-date{font-size:11.5px;color:#8AA5BD;margin-top:6px;}
-  .toast{
-    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
-    background:var(--navy);color:#fff;padding:11px 22px;border-radius:999px;
-    font-size:14px;z-index:100;box-shadow:0 4px 14px rgba(0,0,0,.25);
-    animation:pop .2s;
+  .setup-code{
+    background:#22314A;color:#CFE4F7;border-radius:12px;
+    padding:14px;font-family:monospace;font-size:12px;
+    line-height:1.7;overflow-x:auto;margin:10px 0;white-space:pre;text-align:left;
   }
-  @keyframes pop{from{opacity:0;transform:translateX(-50%) translateY(8px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
-  .hidden{display:none;}
-  .loading{text-align:center;padding:40px 0;font-family:'Jua',sans-serif;color:var(--navy);}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
 </style>
 </head>
@@ -274,9 +279,27 @@
   <div id="app"><div class="loading">불러오는 중...</div></div>
 </div>
 
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-/* ─────────── 설정 ─────────── */
-const TEACHER_PIN = "2026";   // 선생님 접속 비밀번호 (원하는 번호로 수정하세요)
+/* ═══════════════════════════════════════════════════════
+   ★ 설정 구역 — 선생님이 이 부분만 수정하면 됩니다 ★
+   ═══════════════════════════════════════════════════════
+   과제방(mission1.html)에 붙여 넣은 것과 똑같은
+   firebaseConfig 값을 아래에 붙여 넣으세요.
+*/
+const firebaseConfig = {
+  apiKey: "AIzaSyCBgz3oLm_dgKBFwGglidasKoENI5PNs7I",
+  authDomain: "summer-vacation-mission.firebaseapp.com",
+  databaseURL: "https://summer-vacation-mission-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "summer-vacation-mission",
+  storageBucket: "summer-vacation-mission.firebasestorage.app",
+  messagingSenderId: "171875205794",
+  appId: "1:171875205794:web:a5cca666fedc22c2b5cdfb",
+  measurementId: "G-H9QZ9NXR39"
+};
+const TEACHER_PIN = "2026";   // 선생님 비밀번호
 const MISSIONS = [
   "여름에 볼 수 있는 식물(곤충) 관찰, 조사하기",
   "음식을 만들고 그림(사진)이 들어간 보고서 쓰기",
@@ -288,37 +311,13 @@ const MISSIONS = [
   "재활용품을 활용해 만들기 하기",
   "가족 중 한 명에게 인터뷰하기"
 ];
+/* ═══════════════════════════════════════════════════════ */
 // 상태: none(미시작) / pending(제출·확인중) / hold(보류) / passed(통과)
 
-/* ─────────── 저장소 도우미 ─────────── */
-async function sGet(key){
-  try{ const r = await window.storage.get(key, true); return r ? JSON.parse(r.value) : null; }
-  catch(e){ return null; }
-}
-async function sSet(key, val){
-  try{ await window.storage.set(key, JSON.stringify(val), true); return true; }
-  catch(e){ console.error(e); return false; }
-}
-function keyFor(name){ return "bingo-student:" + name.replace(/\s+/g,""); }
-
-async function getStudentList(){ return (await sGet("bingo-students")) || []; }
-async function addStudent(name){
-  const list = await getStudentList();
-  if(!list.includes(name)){ list.push(name); await sSet("bingo-students", list); }
-}
-async function getStudentData(name){
-  return (await sGet(keyFor(name))) || { statuses: Array(9).fill("none"), updatedAt: 0 };
-}
-async function setStudentData(name, data){
-  data.updatedAt = Date.now();
-  return sSet(keyFor(name), data);
-}
-async function getLinks(){ return (await sGet("bingo-links")) || {}; }
-
-/* ─────────── 공통 ─────────── */
 const app = document.getElementById("app");
+let db = null;
 let currentName = null;
-let pollTimer = null;
+let unsubscribe = null;   // 실시간 감시 해제용
 
 function toast(msg){
   const t = document.createElement("div");
@@ -326,17 +325,66 @@ function toast(msg){
   document.body.appendChild(t);
   setTimeout(()=>t.remove(), 2200);
 }
-function stopPoll(){ if(pollTimer){ clearInterval(pollTimer); pollTimer = null; } }
-function esc(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function remember(name){ try{ localStorage.setItem("bingo-name", name); }catch(e){} }
+function recall(){ try{ return localStorage.getItem("bingo-name") || ""; }catch(e){ return ""; } }
+function stopWatch(){ if(unsubscribe){ unsubscribe(); unsubscribe = null; } }
 
 function countBingo(statuses){
   const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
   return lines.filter(l => l.every(i => statuses[i] === "passed")).length;
 }
+function normalizeStatuses(d){
+  let s = (d && Array.isArray(d.statuses)) ? d.statuses.slice() : [];
+  while(s.length < 9) s.push("none");
+  return s.slice(0,9);
+}
+
+/* ─────────── Firestore 도우미 ─────────── */
+function studentRef(name){ return db.collection("students").doc(name); }
+async function getLinks(){
+  try{
+    const snap = await db.collection("config").doc("links").get();
+    return snap.exists ? snap.data() : {};
+  }catch(e){ return {}; }
+}
+
+/* ─────────── 시작 ─────────── */
+function init(){
+  if(firebaseConfig.apiKey === "여기에_붙여넣기"){
+    app.innerHTML = `
+      <div class="section" style="margin-top:24px;">
+        <h3>🔧 선생님, 먼저 설정이 필요해요</h3>
+        <p style="font-size:14px;line-height:1.8;word-break:keep-all;">
+          이 파일을 열어 위쪽의 <b>firebaseConfig</b> 부분에
+          과제방과 똑같은 Firebase 설정값을 붙여 넣어 주세요.</p>
+        <div class="setup-code">const firebaseConfig = {
+  apiKey: "AIza...",
+  authDomain: "프로젝트명.firebaseapp.com",
+  projectId: "프로젝트명",
+  ...
+};</div>
+        <p style="font-size:13px;line-height:1.8;color:#6B8AA6;word-break:keep-all;">
+          📍 위치: Firebase 콘솔 → ⚙️ 프로젝트 설정 → 일반 → 내 앱 → SDK 설정 및 구성 → "구성" 선택</p>
+      </div>`;
+    return;
+  }
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+  }catch(e){
+    app.innerHTML = `<div class="section" style="margin-top:24px;"><h3>⚠️ 연결 오류</h3>
+      <p style="font-size:14px;line-height:1.7;">firebaseConfig 값이 올바른지 확인해 주세요.<br>(${esc(e.message)})</p></div>`;
+    return;
+  }
+  const saved = recall();
+  if(saved) enterStudent(saved);
+  else renderLogin();
+}
 
 /* ─────────── 로그인 화면 ─────────── */
 function renderLogin(){
-  stopPoll(); currentName = null;
+  stopWatch(); currentName = null;
   app.innerHTML = `
     <div class="login-card">
       <h2>이름을 입력하고 시작해요!</h2>
@@ -351,6 +399,7 @@ function renderLogin(){
     const name = input.value.trim().replace(/\s+/g,"");
     if(!name){ toast("이름을 입력해 주세요!"); return; }
     if(name.length < 2){ toast("이름을 정확히 입력해 주세요!"); return; }
+    remember(name);
     enterStudent(name);
   };
   document.getElementById("startBtn").onclick = go;
@@ -359,26 +408,45 @@ function renderLogin(){
   input.focus();
 }
 
-/* ─────────── 학생 화면 ─────────── */
+/* ─────────── 학생 화면 (실시간) ─────────── */
 async function enterStudent(name){
+  stopWatch();
   currentName = name;
-  await addStudent(name);
-  await renderStudent();
-  stopPoll();
-  pollTimer = setInterval(async () => {
-    if(currentName && !document.querySelector(".overlay")) await renderStudent(true);
-  }, 15000);
+  app.innerHTML = `<div class="loading">빙고판을 불러오는 중...</div>`;
+
+  let links = await getLinks();
+
+  // 처음 접속이면 학생 문서 만들기
+  try{
+    const snap = await studentRef(name).get();
+    if(!snap.exists){
+      await studentRef(name).set({ statuses: Array(9).fill("none"), updatedAt: Date.now() });
+    }
+  }catch(e){
+    app.innerHTML = `<div class="section" style="margin-top:24px;"><h3>⚠️ 불러오기 실패</h3>
+      <p style="font-size:14px;line-height:1.7;word-break:keep-all;">인터넷 연결과 Firebase 설정을 확인해 주세요.<br>(${esc(e.message)})</p></div>`;
+    return;
+  }
+
+  // 실시간 감시: 선생님이 통과/보류 처리하면 즉시 화면에 반영
+  unsubscribe = studentRef(name).onSnapshot(snap => {
+    if(currentName !== name) return;
+    const d = snap.exists ? snap.data() : {};
+    renderStudent(d, links);
+  }, err => {
+    console.error(err);
+  });
 }
 
-async function renderStudent(silent){
-  if(!silent) app.innerHTML = `<div class="loading">빙고판을 불러오는 중...</div>`;
-  const data = await getStudentData(currentName);
-  const links = await getLinks();
-  const bingo = countBingo(data.statuses);
-  const passedCount = data.statuses.filter(s=>s==="passed").length;
+function renderStudent(d, links){
+  const statuses = normalizeStatuses(d);
+  const bingo = countBingo(statuses);
+  const passedCount = statuses.filter(s=>s==="passed").length;
+  const openModal = document.querySelector(".overlay");
+  if(openModal) return; // 모달 열려 있을 때는 화면 갱신 미루기
 
   const cells = MISSIONS.map((m,i)=>{
-    const st = data.statuses[i];
+    const st = statuses[i];
     const color = (i % 2 === 0) ? "blue" : "cream";
     let badge = "", stamp = "";
     if(st==="pending") badge = `<span class="badge pending">확인 중</span>`;
@@ -392,11 +460,11 @@ async function renderStudent(silent){
   // 소감문 카드 (빙고 2줄 이상 완성 시 잠금 해제)
   let reflectHtml = "";
   if(bingo >= 2){
-    if(data.reflection && data.reflection.text){
+    if(d.reflection && d.reflection.text){
       reflectHtml = `
         <div class="reflect-card">
           <h3>📝 나의 방학 소감문</h3>
-          <div class="reflect-preview">${esc(data.reflection.text)}</div>
+          <div class="reflect-preview">${esc(d.reflection.text)}</div>
           <button class="btn btn-navy" id="reflectBtn" style="width:100%;">소감문 고쳐 쓰기 ✏️</button>
         </div>`;
     } else {
@@ -419,28 +487,65 @@ async function renderStudent(silent){
     <div class="topbar">
       <span class="who">🙋 ${esc(currentName)}</span>
       <div class="actions">
-        <button class="mini-btn" id="refreshBtn">🔄 새로고침</button>
-        <button class="mini-btn" id="logoutBtn">나가기</button>
+        <button class="mini-btn" id="logoutBtn">이름 바꾸기</button>
       </div>
     </div>
     <div class="bingo-count">지금까지 <strong>${bingo}</strong> 빙고! <span style="font-size:14px;">(통과한 미션 ${passedCount}개)</span></div>
     <div class="grid">${cells}</div>
     ${reflectHtml}`;
 
-  const reflectBtn = document.getElementById("reflectBtn");
-  if(reflectBtn) reflectBtn.onclick = () => openReflection(data);
-
-  document.getElementById("refreshBtn").onclick = () => { renderStudent(); toast("최신 상태로 새로고침했어요!"); };
-  document.getElementById("logoutBtn").onclick = renderLogin;
+  document.getElementById("logoutBtn").onclick = () => {
+    try{ localStorage.removeItem("bingo-name"); }catch(e){}
+    renderLogin();
+  };
   app.querySelectorAll(".cell").forEach(c=>{
-    const open = () => openMission(parseInt(c.dataset.i), data, links);
+    const open = () => openMission(parseInt(c.dataset.i), statuses, links);
     c.onclick = open;
     c.onkeydown = e => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); open(); } };
   });
+  const reflectBtn = document.getElementById("reflectBtn");
+  if(reflectBtn) reflectBtn.onclick = () => openReflection(d);
 }
 
-function openReflection(data){
-  const existing = (data.reflection && data.reflection.text) ? data.reflection.text : "";
+function openMission(i, statuses, links){
+  const st = statuses[i];
+  const link = links[i] || links[String(i)];
+  let statusHtml = "";
+
+  if(st==="none"){
+    statusHtml = `<div class="status-line">아직 시작하지 않은 미션이에요.<br><b>과제방에 들어가서</b> 미션을 수행하고 제출해 주세요!</div>`;
+  } else if(st==="pending"){
+    statusHtml = `<div class="status-line">📮 제출 완료! 선생님이 확인하고 있어요.<br>조금만 기다려 주세요.</div>`;
+  } else if(st==="hold"){
+    statusHtml = `<div class="status-line hold-msg">😢 <b>보류</b>되었어요. 과제방에서 미션을 보완해 다시 제출해 주세요!</div>`;
+  } else {
+    statusHtml = `<div class="status-line pass-msg">🎉 <b>통과!</b> 미션 성공! 정말 잘했어요!</div>`;
+  }
+
+  // 과제방으로 이동할 때 이름을 주소에 함께 실어 보내기 (이름 다시 입력 안 해도 됨)
+  const linkWithName = link ? link + (link.includes("?") ? "&" : "?") + "name=" + encodeURIComponent(currentName) : null;
+  const linkBtn = link
+    ? `<a href="${esc(linkWithName)}" style="text-decoration:none;flex:1;min-width:120px;"><button class="btn btn-navy" style="width:100%;">과제방 들어가기 🚪</button></a>`
+    : `<button class="btn btn-outline" disabled style="opacity:.55;cursor:default;">과제방 준비 중이에요 🔧</button>`;
+
+  const ov = document.createElement("div");
+  ov.className = "overlay";
+  ov.innerHTML = `
+    <div class="modal">
+      <button class="close-x" aria-label="닫기">✕</button>
+      <h3>미션 ${i+1}. ${esc(MISSIONS[i])}</h3>
+      ${statusHtml}
+      <div class="btn-row">${linkBtn}</div>
+    </div>`;
+  document.body.appendChild(ov);
+  const close = () => ov.remove();
+  ov.querySelector(".close-x").onclick = close;
+  ov.addEventListener("click", e => { if(e.target === ov) close(); });
+}
+
+/* ─────────── 소감문 ─────────── */
+function openReflection(d){
+  const existing = (d.reflection && d.reflection.text) ? d.reflection.text : "";
   const ov = document.createElement("div");
   ov.className = "overlay";
   ov.innerHTML = `
@@ -467,51 +572,18 @@ function openReflection(data){
   ov.querySelector("#saveReflectBtn").onclick = async () => {
     const text = ta.value.trim();
     if(text.length < 10){ toast("소감문을 10자 이상 써 주세요!"); return; }
-    const fresh = await getStudentData(currentName);
-    fresh.reflection = { text, savedAt: Date.now() };
-    await setStudentData(currentName, fresh);
-    close(); toast("소감문을 제출했어요! 참 잘했어요 🌟");
-    renderStudent();
+    try{
+      await studentRef(currentName).set({ reflection: { text, savedAt: Date.now() }, updatedAt: Date.now() }, { merge:true });
+      close(); toast("소감문을 제출했어요! 참 잘했어요 🌟");
+    }catch(e){
+      toast("제출에 실패했어요. 인터넷 연결을 확인해 주세요.");
+    }
   };
-}
-
-function openMission(i, data, links){
-  const st = data.statuses[i];
-  const link = links[i];
-  let statusHtml = "";
-
-  if(st==="none"){
-    statusHtml = `<div class="status-line">아직 시작하지 않은 미션이에요.<br><b>과제방에 들어가서</b> 미션을 수행하고 제출해 주세요!</div>`;
-  } else if(st==="pending"){
-    statusHtml = `<div class="status-line">📮 제출 완료! 선생님이 확인하고 있어요.<br>조금만 기다려 주세요.</div>`;
-  } else if(st==="hold"){
-    statusHtml = `<div class="status-line hold-msg">😢 <b>보류</b>되었어요. 과제방에서 미션을 보완해 다시 제출해 주세요!</div>`;
-  } else {
-    statusHtml = `<div class="status-line pass-msg">🎉 <b>통과!</b> 미션 성공! 정말 잘했어요!</div>`;
-  }
-
-  const linkBtn = link
-    ? `<a href="${esc(link)}" target="_blank" rel="noopener" style="text-decoration:none;flex:1;min-width:120px;"><button class="btn btn-navy" style="width:100%;">과제방 들어가기 🚪</button></a>`
-    : `<button class="btn btn-outline" disabled style="opacity:.55;cursor:default;">과제방 준비 중이에요 🔧</button>`;
-
-  const ov = document.createElement("div");
-  ov.className = "overlay";
-  ov.innerHTML = `
-    <div class="modal">
-      <button class="close-x" aria-label="닫기">✕</button>
-      <h3>미션 ${i+1}. ${esc(MISSIONS[i])}</h3>
-      ${statusHtml}
-      <div class="btn-row">${linkBtn}</div>
-    </div>`;
-  document.body.appendChild(ov);
-  const close = () => ov.remove();
-  ov.querySelector(".close-x").onclick = close;
-  ov.addEventListener("click", e => { if(e.target === ov) close(); });
 }
 
 /* ─────────── 교사 로그인 ─────────── */
 function renderTeacherLogin(){
-  stopPoll(); currentName = null;
+  stopWatch(); currentName = null;
   app.innerHTML = `
     <div class="login-card">
       <h2>👩‍🏫 선생님 확인</h2>
@@ -532,18 +604,27 @@ function renderTeacherLogin(){
 
 /* ─────────── 교사 대시보드 ─────────── */
 async function renderTeacher(){
-  stopPoll();
+  stopWatch();
   app.innerHTML = `<div class="loading">학생 자료를 불러오는 중...</div>`;
-  const students = await getStudentList();
-  const links = await getLinks();
-  const all = {};
-  for(const name of students){ all[name] = await getStudentData(name); }
+
+  let students = [];
+  let links = {};
+  try{
+    const snap = await db.collection("students").get();
+    students = snap.docs.map(doc => ({ name: doc.id, ...doc.data() }));
+    links = await getLinks();
+  }catch(e){
+    app.innerHTML = `<div class="section" style="margin-top:24px;"><h3>⚠️ 불러오기 실패</h3>
+      <p style="font-size:14px;">${esc(e.message)}</p></div>`;
+    return;
+  }
+  students.sort((a,b)=>a.name.localeCompare(b.name,"ko"));
 
   // 확인 대기 목록
   const pendingItems = [];
-  for(const name of students){
-    all[name].statuses.forEach((st,i)=>{
-      if(st==="pending") pendingItems.push({name, i});
+  for(const s of students){
+    normalizeStatuses(s).forEach((st,i)=>{
+      if(st==="pending") pendingItems.push({name:s.name, i});
     });
   }
   const pendingHtml = pendingItems.length
@@ -560,27 +641,20 @@ async function renderTeacher(){
 
   // 학생별 현황
   const rowsHtml = students.length
-    ? students.map(name => {
-        const st = all[name].statuses;
-        const dots = st.map(s => `<span class="dot ${s==="passed"?"p":s==="pending"?"w":s==="hold"?"h":""}" title="${s}"></span>`).join("");
+    ? students.map(s => {
+        const st = normalizeStatuses(s);
+        const dots = st.map(x => `<span class="dot ${x==="passed"?"p":x==="pending"?"w":x==="hold"?"h":""}" title="${x}"></span>`).join("");
         return `<div class="student-row">
-          <span><b>${esc(name)}</b> · ${countBingo(st)}빙고 (${st.filter(x=>x==="passed").length}/9)${all[name].reflection && all[name].reflection.text ? " 📝" : ""}</span>
+          <span><b>${esc(s.name)}</b> · ${countBingo(st)}빙고 (${st.filter(x=>x==="passed").length}/9)${s.reflection && s.reflection.text ? " 📝" : ""}</span>
           <span class="dots">${dots}</span>
         </div>`;
       }).join("")
     : `<div class="empty-msg">아직 접속한 학생이 없어요.</div>`;
 
-  // 과제방 링크 설정
-  const linkRows = MISSIONS.map((m,i)=>`
-    <div class="link-row">
-      <span class="l-name">${i+1}. ${esc(m.length>14 ? m.slice(0,14)+"…" : m)}</span>
-      <input type="url" data-link-i="${i}" placeholder="과제방 링크 (https://...)" value="${links[i]?esc(links[i]):""}">
-    </div>`).join("");
-
   // 소감문 목록
   const reflections = students
-    .filter(n => all[n].reflection && all[n].reflection.text)
-    .map(n => ({ name: n, ...all[n].reflection }))
+    .filter(s => s.reflection && s.reflection.text)
+    .map(s => ({ name: s.name, ...s.reflection }))
     .sort((a,b) => b.savedAt - a.savedAt);
   const reflectListHtml = reflections.length
     ? reflections.map(r => `
@@ -590,6 +664,16 @@ async function renderTeacher(){
         <div class="r-date">${new Date(r.savedAt).toLocaleString("ko-KR")} 제출</div>
       </div>`).join("")
     : `<div class="empty-msg">아직 제출된 소감문이 없어요.</div>`;
+
+  // 과제방 링크 설정
+  const linkRows = MISSIONS.map((m,i)=>{
+    const v = links[i] || links[String(i)] || "";
+    return `
+    <div class="link-row">
+      <span class="l-name">${i+1}. ${esc(m.length>14 ? m.slice(0,14)+"…" : m)}</span>
+      <input type="url" data-link-i="${i}" placeholder="과제방 링크 (https://...)" value="${esc(v)}">
+    </div>`;
+  }).join("");
 
   app.innerHTML = `
     <div class="topbar">
@@ -601,6 +685,8 @@ async function renderTeacher(){
     </div>
     <div class="section">
       <h3>📮 확인 대기 중인 제출 (${pendingItems.length})</h3>
+      <div style="font-size:12px;color:#8AA5BD;margin-bottom:10px;word-break:keep-all;">
+        💡 과제방이 있는 미션은 과제방의 선생님 화면에서 글과 사진을 보고 처리하는 것이 좋아요. 여기서 처리하면 내용 확인 없이 바로 통과/보류돼요.</div>
       ${pendingHtml}
     </div>
     <div class="section">
@@ -621,18 +707,23 @@ async function renderTeacher(){
       <button class="btn btn-navy" id="saveLinksBtn" style="width:100%;margin-top:6px;">링크 저장하기</button>
     </div>`;
 
-  document.getElementById("refreshBtn").onclick = () => { renderTeacher(); };
+  document.getElementById("refreshBtn").onclick = renderTeacher;
   document.getElementById("logoutBtn").onclick = renderLogin;
 
   app.querySelectorAll("[data-act]").forEach(btn=>{
     btn.onclick = async () => {
       const name = btn.dataset.name, i = parseInt(btn.dataset.i), act = btn.dataset.act;
       btn.disabled = true;
-      const d = await getStudentData(name);
-      if(d.statuses[i] === "pending"){
-        d.statuses[i] = act;
-        await setStudentData(name, d);
-        toast(act==="passed" ? `${name} 미션 ${i+1} 통과 처리!` : `${name} 미션 ${i+1} 보류 처리`);
+      try{
+        const snap = await studentRef(name).get();
+        const st = normalizeStatuses(snap.exists ? snap.data() : {});
+        if(st[i] === "pending"){
+          st[i] = act;
+          await studentRef(name).set({ statuses: st, updatedAt: Date.now() }, { merge:true });
+          toast(act==="passed" ? `${name} 미션 ${i+1} 통과 처리!` : `${name} 미션 ${i+1} 보류 처리`);
+        }
+      }catch(e){
+        toast("처리에 실패했어요. 다시 시도해 주세요.");
       }
       renderTeacher();
     };
@@ -644,15 +735,16 @@ async function renderTeacher(){
       const v = inp.value.trim();
       if(v) newLinks[inp.dataset.linkI] = v;
     });
-    await sSet("bingo-links", newLinks);
-    toast("과제방 링크를 저장했어요!");
+    try{
+      await db.collection("config").doc("links").set(newLinks);
+      toast("과제방 링크를 저장했어요!");
+    }catch(e){
+      toast("저장에 실패했어요. 다시 시도해 주세요.");
+    }
   };
-
-  pollTimer = setInterval(()=>{ if(!document.querySelector(".overlay")) renderTeacher(); }, 20000);
 }
 
-/* ─────────── 시작 ─────────── */
-renderLogin();
+init();
 </script>
 </body>
 </html>
