@@ -581,6 +581,15 @@ function openReflection(d){
   };
 }
 
+/* ─────────── 사진 크게 보기 ─────────── */
+function openLightbox(src){
+  const lb = document.createElement("div");
+  lb.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;z-index:100;cursor:pointer;padding:16px;";
+  lb.innerHTML = `<img src="${src}" alt="사진 크게 보기" style="max-width:100%;max-height:90vh;border-radius:12px;">`;
+  lb.onclick = ()=>lb.remove();
+  document.body.appendChild(lb);
+}
+
 /* ─────────── 교사 로그인 ─────────── */
 function renderTeacherLogin(){
   stopWatch(); currentName = null;
@@ -628,13 +637,19 @@ async function renderTeacher(){
     });
   }
   const pendingHtml = pendingItems.length
-    ? pendingItems.map(p => `
+    ? pendingItems.map((p,idx) => `
       <div class="review-item">
         <div class="r-name">🙋 ${esc(p.name)}</div>
         <div class="r-mission">미션 ${p.i+1}. ${esc(MISSIONS[p.i])}</div>
+        <div class="r-content" id="content-${idx}" data-name="${esc(p.name)}" data-i="${p.i}">
+          <span style="font-size:12px;color:#8AA5BD;">제출 내용을 불러오는 중...</span>
+        </div>
+        <div style="margin:8px 0;">
+          <input type="text" data-feedback-idx="${idx}" maxlength="100" placeholder="보류 시 학생에게 보낼 한마디 (선택)" style="width:100%;font-family:inherit;font-size:13px;padding:9px 12px;border:1.5px solid #D8E8F4;border-radius:10px;outline:none;">
+        </div>
         <div class="r-btns">
-          <button class="btn btn-green" data-act="passed" data-name="${esc(p.name)}" data-i="${p.i}">✅ 통과</button>
-          <button class="btn btn-primary" data-act="hold" data-name="${esc(p.name)}" data-i="${p.i}" style="margin:0;">↩️ 보류</button>
+          <button class="btn btn-green" data-act="passed" data-name="${esc(p.name)}" data-i="${p.i}" data-idx="${idx}">✅ 통과</button>
+          <button class="btn btn-primary" data-act="hold" data-name="${esc(p.name)}" data-i="${p.i}" data-idx="${idx}" style="margin:0;">↩️ 보류</button>
         </div>
       </div>`).join("")
     : `<div class="empty-msg">지금 확인할 제출이 없어요 ☕</div>`;
@@ -685,8 +700,6 @@ async function renderTeacher(){
     </div>
     <div class="section">
       <h3>📮 확인 대기 중인 제출 (${pendingItems.length})</h3>
-      <div style="font-size:12px;color:#8AA5BD;margin-bottom:10px;word-break:keep-all;">
-        💡 과제방이 있는 미션은 과제방의 선생님 화면에서 글과 사진을 보고 처리하는 것이 좋아요. 여기서 처리하면 내용 확인 없이 바로 통과/보류돼요.</div>
       ${pendingHtml}
     </div>
     <div class="section">
@@ -710,16 +723,62 @@ async function renderTeacher(){
   document.getElementById("refreshBtn").onclick = renderTeacher;
   document.getElementById("logoutBtn").onclick = renderLogin;
 
+  // 각 제출의 과제방 내용(글/사진) 불러오기
+  app.querySelectorAll(".r-content").forEach(async box=>{
+    const name = box.dataset.name, i = parseInt(box.dataset.i);
+    const missionId = "mission" + (i+1);
+    try{
+      const postSnap = await db.collection("missions").doc(missionId)
+        .collection("posts").doc(name).get();
+      if(!postSnap.exists){
+        box.innerHTML = `<div style="font-size:12.5px;color:#8AA5BD;background:#F4FAFF;border-radius:10px;padding:9px 12px;">과제방에서 제출한 내용이 없어요. (과제방 없이 제출된 미션)</div>`;
+        return;
+      }
+      const post = postSnap.data();
+      let metaLine = "";
+      if(post.subject) metaLine += `관찰 대상: <b>${esc(post.subject)}</b>`;
+      if(post.place) metaLine += (metaLine?" · ":"") + `장소: ${esc(post.place)}`;
+      if(post.submittedAt) metaLine += (metaLine?" · ":"") + new Date(post.submittedAt).toLocaleString("ko-KR");
+      box.innerHTML = `
+        ${metaLine ? `<div style="font-size:12px;color:#8AA5BD;margin-bottom:6px;">${metaLine}</div>` : ""}
+        <div style="font-size:13.5px;line-height:1.7;white-space:pre-wrap;word-break:break-word;background:#F4FAFF;border-radius:10px;padding:10px 12px;margin-bottom:8px;">${esc(post.text||"")}</div>
+        <div class="p-photos" style="display:flex;gap:6px;flex-wrap:wrap;"><span style="font-size:12px;color:#8AA5BD;">사진 불러오는 중...</span></div>`;
+      // 사진 불러오기
+      const photoBox = box.querySelector(".p-photos");
+      try{
+        const phSnap = await db.collection("missions").doc(missionId)
+          .collection("posts").doc(name).collection("photos").orderBy("order").get();
+        const list = phSnap.docs.map(d=>d.data().data);
+        photoBox.innerHTML = list.length
+          ? list.map(d=>`<img src="${d}" alt="제출 사진" style="width:88px;height:88px;object-fit:cover;border-radius:10px;border:1.5px solid #D8E8F4;cursor:pointer;">`).join("")
+          : `<span style="font-size:12px;color:#8AA5BD;">사진 없음</span>`;
+        photoBox.querySelectorAll("img").forEach(img=>{ img.onclick = ()=>openLightbox(img.src); });
+      }catch(e){
+        photoBox.innerHTML = `<span style="font-size:12px;color:#B33227;">사진 로딩 실패</span>`;
+      }
+    }catch(e){
+      box.innerHTML = `<div style="font-size:12.5px;color:#B33227;">내용을 불러오지 못했어요.</div>`;
+    }
+  });
+
   app.querySelectorAll("[data-act]").forEach(btn=>{
     btn.onclick = async () => {
       const name = btn.dataset.name, i = parseInt(btn.dataset.i), act = btn.dataset.act;
       btn.disabled = true;
+      const fbInput = app.querySelector(`[data-feedback-idx="${btn.dataset.idx}"]`);
+      const feedback = fbInput ? fbInput.value.trim() : "";
       try{
         const snap = await studentRef(name).get();
         const st = normalizeStatuses(snap.exists ? snap.data() : {});
         if(st[i] === "pending"){
           st[i] = act;
           await studentRef(name).set({ statuses: st, updatedAt: Date.now() }, { merge:true });
+          // 과제방 게시글의 상태와 선생님 한마디도 함께 갱신 (과제방이 있는 경우)
+          try{
+            const postRef = db.collection("missions").doc("mission"+(i+1)).collection("posts").doc(name);
+            const postSnap = await postRef.get();
+            if(postSnap.exists) await postRef.set({ status: act, feedback }, { merge:true });
+          }catch(e){}
           toast(act==="passed" ? `${name} 미션 ${i+1} 통과 처리!` : `${name} 미션 ${i+1} 보류 처리`);
         }
       }catch(e){
