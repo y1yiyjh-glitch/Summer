@@ -736,8 +736,8 @@ async function renderTeacher(){
       }
       const post = postSnap.data();
       let metaLine = "";
-      if(post.subject) metaLine += `관찰 대상: <b>${esc(post.subject)}</b>`;
-      if(post.place) metaLine += (metaLine?" · ":"") + `장소: ${esc(post.place)}`;
+      if(post.subject) metaLine += `${esc(post.subjectLabel||"주제")}: <b>${esc(post.subject)}</b>`;
+      if(post.place) metaLine += (metaLine?" · ":"") + `${esc(post.placeLabel||"장소")}: ${esc(post.place)}`;
       if(post.submittedAt) metaLine += (metaLine?" · ":"") + new Date(post.submittedAt).toLocaleString("ko-KR");
       box.innerHTML = `
         ${metaLine ? `<div style="font-size:12px;color:#8AA5BD;margin-bottom:6px;">${metaLine}</div>` : ""}
