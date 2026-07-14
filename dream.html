@@ -1,0 +1,833 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#5b5bd6" />
+  <meta name="description" content="초등학교 3·4학년용 꿈끼탐색 진로교육 웹앱" />
+  <title>꿈끼 탐험대</title>
+  <style>
+:root {
+  --bg: #f5f6ff;
+  --surface: #ffffff;
+  --surface-2: #eef0ff;
+  --ink: #26263d;
+  --muted: #666783;
+  --primary: #5b5bd6;
+  --primary-dark: #4545b8;
+  --accent: #ffbd59;
+  --green: #2f9e76;
+  --red: #d64d62;
+  --line: #dadcf2;
+  --shadow: 0 14px 34px rgba(63, 63, 130, 0.12);
+  --radius: 22px;
+  --radius-sm: 14px;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 8% 10%, rgba(255, 189, 89, .23), transparent 24rem),
+    radial-gradient(circle at 95% 25%, rgba(91, 91, 214, .15), transparent 30rem),
+    var(--bg);
+  font-family: "Pretendard", "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.62;
+}
+button, input, textarea, select { font: inherit; }
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+  outline: 4px solid rgba(91, 91, 214, .25);
+  outline-offset: 2px;
+}
+
+.skip-link {
+  position: fixed; left: 1rem; top: -4rem; z-index: 1000;
+  background: #111; color: #fff; padding: .8rem 1rem; border-radius: 10px;
+}
+.skip-link:focus { top: 1rem; }
+
+.topbar {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; justify-content: space-between; align-items: center;
+  min-height: 74px; padding: .75rem clamp(1rem, 4vw, 3rem);
+  background: rgba(255,255,255,.88); backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(218,220,242,.8);
+}
+.brand-button {
+  display: flex; gap: .8rem; align-items: center; border: 0; background: transparent; color: var(--ink); text-align: left;
+}
+.brand-button strong { display: block; font-size: 1.05rem; }
+.brand-button small { display: block; color: var(--muted); font-size: .76rem; }
+.brand-mark { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 15px; background: var(--surface-2); font-size: 1.5rem; }
+.top-actions { display: flex; align-items: center; gap: .7rem; }
+.save-status { color: var(--green); font-size: .85rem; font-weight: 700; }
+
+#app { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; min-height: calc(100vh - 150px); padding: clamp(1.5rem, 4vw, 3.4rem) 0 4rem; }
+.footer { text-align: center; color: var(--muted); padding: 1.5rem 1rem 2.5rem; font-size: .9rem; }
+
+.hero {
+  display: grid; grid-template-columns: 1.25fr .75fr; gap: 2rem; align-items: center;
+  background: linear-gradient(135deg, #fff 0%, #f1f2ff 100%); border: 1px solid var(--line); border-radius: 32px; padding: clamp(1.5rem, 5vw, 4.5rem); box-shadow: var(--shadow);
+}
+.eyebrow { display: inline-flex; padding: .35rem .75rem; border-radius: 999px; background: #fff5dc; color: #8b5a00; font-weight: 800; font-size: .83rem; }
+.hero h1, .page-title { margin: .7rem 0 1rem; line-height: 1.18; letter-spacing: -.04em; }
+.hero h1 { font-size: clamp(2.1rem, 5vw, 4.2rem); }
+.hero p { color: var(--muted); font-size: 1.05rem; }
+.hero-visual { display: grid; place-items: center; min-height: 320px; position: relative; }
+.planet { display: grid; place-items: center; width: min(280px, 75vw); aspect-ratio: 1; border-radius: 50%; background: linear-gradient(145deg, #6969e9, #4848bd); box-shadow: inset -20px -24px 0 rgba(0,0,0,.08), 0 28px 60px rgba(69,69,184,.28); font-size: 6rem; }
+.float-badge { position: absolute; padding: .65rem .9rem; background: white; border-radius: 16px; box-shadow: var(--shadow); font-weight: 800; }
+.float-badge.one { top: 8%; left: 2%; transform: rotate(-6deg); }
+.float-badge.two { right: 0; bottom: 14%; transform: rotate(5deg); }
+
+.panel, .section-card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(63,63,130,.07);
+}
+.panel { padding: clamp(1.2rem, 3vw, 2rem); }
+.section-card { padding: 1.35rem; }
+.stack { display: grid; gap: 1rem; }
+.stack-lg { display: grid; gap: 1.5rem; }
+.grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 1rem; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 1rem; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 1rem; }
+
+.student-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: .75rem; }
+.student-button {
+  display: grid; place-items: center; gap: .2rem; min-height: 112px; padding: 1rem;
+  border: 1.5px solid var(--line); border-radius: 18px; background: #fff; color: var(--ink);
+  box-shadow: 0 6px 16px rgba(63,63,130,.06); transition: transform .15s, border-color .15s, box-shadow .15s;
+}
+.student-button:hover { transform: translateY(-2px); border-color: var(--primary); box-shadow: var(--shadow); }
+.student-button span { font-size: 1.8rem; }
+.student-button strong { font-size: 1.1rem; }
+.student-button small { color: var(--muted); }
+
+.page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; margin-bottom: 1.5rem; }
+.page-title { font-size: clamp(1.8rem, 4vw, 3rem); }
+.page-subtitle { margin: 0; color: var(--muted); }
+
+.progress-wrap { margin: 1.5rem 0; }
+.progress-track { height: 12px; background: #e9eaf8; border-radius: 999px; overflow: hidden; }
+.progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary), #8b75e9); border-radius: inherit; transition: width .35s ease; }
+.progress-labels { display: grid; grid-template-columns: repeat(5,1fr); gap: .5rem; margin-top: .65rem; color: var(--muted); font-size: .78rem; text-align: center; }
+.progress-labels .done { color: var(--green); font-weight: 800; }
+
+.activity-card { position: relative; overflow: hidden; padding: 1.35rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); transition: transform .2s, box-shadow .2s; }
+.activity-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.activity-card.locked { opacity: .6; filter: grayscale(.35); }
+.activity-card .icon { font-size: 2.15rem; }
+.activity-card h3 { margin: .55rem 0 .35rem; }
+.activity-card p { margin: 0 0 1rem; color: var(--muted); min-height: 3.2em; }
+.status-chip { position: absolute; right: 1rem; top: 1rem; padding: .25rem .6rem; border-radius: 999px; font-size: .75rem; font-weight: 800; background: #eeeefe; color: var(--primary); }
+.status-chip.done { background: #e4f6ef; color: #237657; }
+
+.primary-button, .secondary-button, .ghost-button, .danger-button {
+  border-radius: 14px; min-height: 46px; padding: .7rem 1rem; font-weight: 800; border: 1px solid transparent; transition: transform .15s, background .15s;
+}
+.primary-button { background: var(--primary); color: white; }
+.primary-button:hover { background: var(--primary-dark); transform: translateY(-1px); }
+.secondary-button { background: var(--surface-2); color: var(--primary-dark); border-color: #d6d7f6; }
+.ghost-button { background: white; color: var(--ink); border-color: var(--line); }
+.danger-button { background: #fff0f2; color: var(--red); border-color: #ffd4db; }
+.button-row { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 1.2rem; }
+.button-row.end { justify-content: flex-end; }
+button:disabled { cursor: not-allowed; opacity: .55; transform: none !important; }
+
+.field { display: grid; gap: .45rem; }
+.field label, .field legend { font-weight: 800; }
+.field small, .helper { color: var(--muted); }
+input[type="text"], input[type="password"], textarea, select {
+  width: 100%; border: 1.5px solid var(--line); background: #fff; color: var(--ink); border-radius: 13px; padding: .8rem .9rem;
+}
+textarea { resize: vertical; min-height: 105px; }
+fieldset { border: 0; padding: 0; margin: 0; }
+
+.choice-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .65rem; }
+.choice input { position: absolute; opacity: 0; pointer-events: none; }
+.choice span {
+  display: flex; align-items: center; min-height: 48px; padding: .7rem .8rem; border: 1.5px solid var(--line); border-radius: 13px; background: #fff; transition: .15s;
+}
+.choice input:checked + span { border-color: var(--primary); background: var(--surface-2); color: var(--primary-dark); font-weight: 800; box-shadow: inset 0 0 0 1px var(--primary); }
+.choice input:focus-visible + span { outline: 4px solid rgba(91,91,214,.25); }
+.category-block { padding: 1rem; border: 1px dashed #d5d6ef; border-radius: 18px; background: #fbfbff; }
+.category-block h3 { margin: 0 0 .8rem; }
+
+.notice { padding: 1rem 1.1rem; border-radius: 15px; background: #fff7e4; border: 1px solid #ffe0a0; color: #6b4a05; }
+.notice.info { background: #eef4ff; border-color: #cadcff; color: #294f8b; }
+.notice.success { background: #eaf8f2; border-color: #bfe8d7; color: #216b51; }
+.empty { padding: 2rem; text-align: center; border: 2px dashed var(--line); border-radius: 18px; color: var(--muted); }
+
+.tag-list { display: flex; flex-wrap: wrap; gap: .5rem; }
+.tag { display: inline-flex; align-items: center; gap: .3rem; padding: .35rem .65rem; border-radius: 999px; background: var(--surface-2); color: var(--primary-dark); font-weight: 700; font-size: .85rem; }
+.tag.green { background: #e4f6ef; color: #237657; }
+.tag.gold { background: #fff4d7; color: #805600; }
+
+.career-card { padding: 1.25rem; border: 1px solid var(--line); border-radius: 20px; background: linear-gradient(180deg,#fff,#fafaff); }
+.career-card h3 { margin: .4rem 0; font-size: 1.35rem; }
+.career-type { font-size: .75rem; font-weight: 900; color: var(--primary); }
+.career-card dl { margin: .7rem 0; }
+.career-card dt { font-weight: 900; margin-top: .6rem; }
+.career-card dd { margin: .15rem 0 0; color: var(--muted); }
+
+.report { background: white; border-radius: 26px; border: 1px solid var(--line); overflow: hidden; box-shadow: var(--shadow); }
+.report-cover { padding: 2.5rem; text-align: center; background: linear-gradient(135deg,#5b5bd6,#8468dd); color: white; }
+.report-cover h1 { margin: .4rem 0; font-size: clamp(2rem,5vw,3.7rem); }
+.report-body { padding: clamp(1.2rem, 4vw, 2.7rem); }
+.report-section { padding: 1.2rem 0; border-bottom: 1px solid var(--line); }
+.report-section:last-child { border-bottom: 0; }
+.report-section h2 { margin: 0 0 .8rem; }
+.future-poster { display: grid; grid-template-columns: .7fr 1.3fr; gap: 1rem; padding: 1.2rem; border-radius: 18px; background: #f7f7ff; }
+.future-emoji { display: grid; place-items: center; min-height: 180px; border-radius: 18px; background: linear-gradient(145deg,#fff3d2,#ffd984); font-size: 5rem; }
+
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 650px; }
+th, td { padding: .75rem; border-bottom: 1px solid var(--line); text-align: left; }
+th { background: #f5f5ff; }
+
+.toast { position: fixed; left: 50%; bottom: 1.5rem; z-index: 100; transform: translate(-50%, 120px); background: #25253a; color: white; padding: .8rem 1.1rem; border-radius: 13px; box-shadow: var(--shadow); transition: transform .25s; }
+.toast.show { transform: translate(-50%,0); }
+.modal-backdrop { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 1rem; background: rgba(25,25,45,.48); }
+.modal { width: min(560px,100%); max-height: 90vh; overflow: auto; background: white; border-radius: 22px; padding: 1.4rem; box-shadow: 0 30px 80px rgba(0,0,0,.25); }
+.modal h2 { margin-top: 0; }
+
+@media (max-width: 820px) {
+  .hero, .grid-2, .grid-3, .grid-4, .future-poster { grid-template-columns: 1fr; }
+  .hero-visual { min-height: 240px; }
+  .page-head { align-items: flex-start; flex-direction: column; }
+  .save-status { display: none; }
+  .progress-labels { font-size: .66rem; }
+}
+@media (max-width: 560px) {
+  #app { width: min(100% - 1rem,1180px); }
+  .topbar { padding: .6rem .7rem; }
+  .brand-button small { display: none; }
+  .ghost-button { padding-inline: .7rem; }
+  .hero { padding: 1.25rem; border-radius: 22px; }
+  .planet { width: 200px; font-size: 4.5rem; }
+  .choice-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .button-row > button { flex: 1 1 auto; }
+}
+
+@media print {
+  body { background: #fff; }
+  .topbar, .footer, .no-print, .button-row, .toast { display: none !important; }
+  #app { width: 100%; padding: 0; }
+  .report { box-shadow: none; border: 0; }
+  .report-cover { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .report-section { break-inside: avoid; }
+}
+
+</style>
+</head>
+<body>
+  <a class="skip-link" href="#app">본문으로 바로가기</a>
+  <header class="topbar">
+    <button class="brand-button" id="homeBtn" type="button" aria-label="처음 화면으로">
+      <span class="brand-mark" aria-hidden="true">🧭</span>
+      <span><strong>꿈끼 탐험대</strong><small>나를 찾고 미래를 만나요</small></span>
+    </button>
+    <div class="top-actions">
+      <span id="saveStatus" class="save-status" aria-live="polite">자동 저장 준비</span>
+      <button id="teacherBtn" class="ghost-button" type="button">교사용</button>
+    </div>
+  </header>
+
+  <main id="app" tabindex="-1"></main>
+
+  <footer class="footer">
+    <p>AI의 추천은 정답이 아니라 다양한 가능성을 탐색하기 위한 자료입니다.</p>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="modalRoot"></div>
+
+  <script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+import { getDatabase, ref, get, onValue, set, update, remove, runTransaction } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
+
+'use strict';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCBgz3oLm_dgKBFwGglidasKoENI5PNs7I",
+  authDomain: "summer-vacation-mission.firebaseapp.com",
+  databaseURL: "https://summer-vacation-mission-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "summer-vacation-mission",
+  storageBucket: "summer-vacation-mission.firebasestorage.app",
+  messagingSenderId: "171875205794",
+  appId: "1:171875205794:web:a5cca666fedc22c2b5cdfb",
+  measurementId: "G-H9QZ9NXR39"
+};
+
+const FIREBASE_ROOT = 'dreamCareerExplorer/v1';
+const STORAGE_KEY = 'dreamCareerExplorer.fixedClass.v2';
+const TEACHER_CODE = '2026';
+const STUDENTS = [
+  {id:'student-1', nickname:'박희락'},
+  {id:'student-2', nickname:'허준우'},
+  {id:'student-3', nickname:'박온유'},
+  {id:'student-4', nickname:'박화평'},
+  {id:'student-5', nickname:'김시후'}
+];
+const STUDENT_NAMES = STUDENTS.map(student => student.nickname);
+
+const activityGroups = {
+  '읽고 표현하기': ['책 읽기','글쓰기','이야기 만들기','발표하기','친구에게 설명하기','토론하기'],
+  '예술과 창작': ['그림 그리기','만들기','꾸미기','노래 부르기','악기 연주하기','춤추기','사진 찍기','영상 만들기'],
+  '사람과 함께하기': ['친구와 이야기하기','친구 도와주기','어린 동생 돌보기','여러 사람과 함께하기','친구를 즐겁게 해주기','모둠 활동하기'],
+  '자연과 생명': ['동물 돌보기','식물 기르기','자연 관찰하기','곤충 관찰하기','환경 보호 활동하기','야외에서 활동하기'],
+  '탐구와 문제 해결': ['실험하기','계산하기','퍼즐 풀기','규칙 찾기','새로운 것을 조사하기','어려운 문제 해결하기'],
+  '디지털과 기술': ['컴퓨터 사용하기','코딩하기','게임하기','게임 만들기','로봇 조작하기','기계나 물건 고치기'],
+  '생활과 신체 활동': ['운동하기','요리하기','정리하기','계획 세우기','새로운 장소에 가기','물건 모으기']
+};
+
+const reasonOptions = ['재미있어서','새로운 것을 알 수 있어서','내 생각을 표현할 수 있어서','사람들을 도울 수 있어서','친구들과 함께할 수 있어서','어려운 문제를 해결하는 것이 좋아서','완성했을 때 뿌듯해서','몸을 움직일 수 있어서','자연이나 동물이 좋아서','내가 잘하는 활동이어서','사람들에게 보여주는 것이 좋아서','새로운 것을 상상할 수 있어서'];
+
+const strengthGroups = {
+  '생각하는 힘': ['새로운 생각','질문하는 힘','꼼꼼한 관찰력','기억력','문제 해결력','계획하는 힘','신중한 판단','호기심'],
+  '표현하는 힘': ['쉽게 설명하는 힘','자신 있는 발표','재미있는 글쓰기','그림 표현력','이야기 만드는 힘','의사소통 능력'],
+  '함께하는 힘': ['경청','친구 돕기','공감','유쾌함','협동심','배려심','의견 존중'],
+  '실천하는 힘': ['책임감','꾸준함','약속 지키기','정리정돈','다시 도전하는 힘','용기','자기주도성'],
+  '만들고 움직이는 힘': ['만들기 능력','섬세한 손기술','운동 능력','몸 표현력','도구 활용력','디지털 활용력','창의력']
+};
+
+const valueOptions = ['사람을 돕는 것','새로운 것을 만드는 것','자연을 보호하는 것','즐겁게 활동하는 것','안정적으로 활동하는 것','친구들과 함께하는 것','혼자 집중하는 것','어려운 문제를 해결하는 것','새로운 장소를 경험하는 것','결과를 사람들에게 보여주는 것','생명과 환경을 소중히 하는 것'];
+const futureTopics = ['인공지능과 로봇','기후 변화','미래의 학교','미래의 농촌','우주여행','해양 쓰레기','멸종위기 동물','고령화 사회','미래의 교통','가상현실','재난과 안전','미래의 음식','새로운 질병','에너지 부족','스마트 도시'];
+const futureTools = ['인공지능','로봇','드론','가상현실','우주선','특별한 옷','새로운 교통수단','친환경 기계','생명과학 기술','재활용 장치','직접 만든 도구'];
+const workPlaces = ['학교','병원','연구소','바다','숲','우주','농촌','도시','가상공간','이동하면서 일함'];
+const audienceOptions = ['어린이','어른','노인','장애가 있는 사람','동물','식물','지구 환경','모든 사람'];
+
+const careers = [
+  {name:'초등학교 교사', type:'친숙한 직업', category:'사람', tags:['책 읽기','글쓰기','발표하기','친구에게 설명하기','친구 도와주기','모둠 활동하기','의사소통 능력','배려심','책임감'], values:['사람을 돕는 것','친구들과 함께하는 것'], work:'어린이들이 배우고 성장하도록 수업하고 생활을 도와줍니다.', why:'배운 내용을 설명하고 사람의 성장을 돕는 데 관심을 활용할 수 있습니다.', strengths:['의사소통 능력','배려심','책임감'], kids:['친구에게 배운 내용 설명하기','작은 수업 자료 만들어 보기','동생에게 책 읽어 주기']},
+  {name:'동물행동전문가', type:'잘 알려지지 않은 직업', category:'자연', tags:['동물 돌보기','자연 관찰하기','곤충 관찰하기','새로운 것을 조사하기','꼼꼼한 관찰력','책임감'], values:['생명과 환경을 소중히 하는 것','자연을 보호하는 것'], work:'동물의 행동을 관찰하고 동물과 사람이 더 잘 지내도록 돕습니다.', why:'생명에 관심을 갖고 작은 변화를 알아차리는 힘을 사용할 수 있습니다.', strengths:['관찰력','책임감','생명을 존중하는 마음'], kids:['동물 관찰 일지 쓰기','동물 관련 책 읽기','멸종위기 동물 보호 방법 조사하기']},
+  {name:'환경 데이터 분석가', type:'미래 중요 직업', category:'과학', tags:['계산하기','규칙 찾기','새로운 것을 조사하기','컴퓨터 사용하기','코딩하기','환경 보호 활동하기','문제 해결력'], values:['자연을 보호하는 것','어려운 문제를 해결하는 것'], work:'기후와 환경 자료를 컴퓨터로 분석해 문제의 원인과 해결 방법을 찾습니다.', why:'숫자와 규칙을 찾는 힘을 지구 환경을 지키는 데 연결할 수 있습니다.', strengths:['분석력','꼼꼼함','문제 해결력'], kids:['날씨 자료를 표와 그래프로 나타내기','우리 동네 쓰레기 양 조사하기','기초 코딩 배우기']},
+  {name:'게임 기획자', type:'친숙한 직업', category:'디지털', tags:['게임하기','게임 만들기','이야기 만들기','그림 그리기','규칙 찾기','코딩하기','창의력'], values:['새로운 것을 만드는 것','결과를 사람들에게 보여주는 것'], work:'게임의 이야기, 규칙, 캐릭터와 재미있는 활동을 계획합니다.', why:'상상한 이야기를 규칙과 디지털 기술로 표현하는 것을 좋아할 때 잘 연결됩니다.', strengths:['창의력','협동심','논리적 사고'], kids:['종이로 보드게임 만들기','게임 규칙 설명서 쓰기','스크래치로 간단한 게임 만들기']},
+  {name:'재난안전 드론 조종사', type:'미래 중요 직업', category:'안전', tags:['로봇 조작하기','컴퓨터 사용하기','야외에서 활동하기','어려운 문제 해결하기','용기','책임감'], values:['사람을 돕는 것','어려운 문제를 해결하는 것'], work:'사람이 들어가기 위험한 재난 현장을 드론으로 살펴보고 구조를 돕습니다.', why:'기계를 다루는 힘과 사람을 돕고 싶은 마음을 함께 활용할 수 있습니다.', strengths:['침착함','책임감','공간 감각'], kids:['드론의 안전 규칙 알아보기','학교 안전지도 만들기','재난 상황별 대처 방법 조사하기']},
+  {name:'과학관 전시기획자', type:'잘 알려지지 않은 직업', category:'과학', tags:['실험하기','만들기','꾸미기','친구에게 설명하기','새로운 것을 조사하기','이야기 만들기'], values:['새로운 것을 만드는 것','결과를 사람들에게 보여주는 것'], work:'과학 원리를 쉽고 재미있게 체험하는 전시를 만듭니다.', why:'새로운 것을 조사하고 다른 사람이 이해하기 쉽게 표현하는 힘을 사용할 수 있습니다.', strengths:['창의력','설명하는 힘','기획력'], kids:['교실 미니 과학 전시 만들기','실험 안내판 쓰기','과학관 전시 관찰하기']},
+  {name:'생태복원가', type:'미래 중요 직업', category:'자연', tags:['식물 기르기','자연 관찰하기','환경 보호 활동하기','야외에서 활동하기','새로운 것을 조사하기','책임감'], values:['자연을 보호하는 것','생명과 환경을 소중히 하는 것'], work:'훼손된 숲, 하천, 습지가 다시 건강해지도록 조사하고 복원합니다.', why:'자연을 관찰하고 꾸준히 돌보는 강점을 지구를 회복하는 데 쓸 수 있습니다.', strengths:['관찰력','책임감','꾸준함'], kids:['학교 주변 생태지도 만들기','토종식물 알아보기','작은 화단 돌보기']},
+  {name:'아동책 작가', type:'친숙한 직업', category:'표현', tags:['책 읽기','글쓰기','이야기 만들기','그림 그리기','새로운 생각','공감'], values:['새로운 것을 만드는 것','혼자 집중하는 것'], work:'어린이가 즐겁게 읽고 생각할 수 있는 이야기를 씁니다.', why:'책과 이야기를 좋아하고 마음속 생각을 글과 그림으로 표현할 수 있습니다.', strengths:['상상력','글쓰기','공감'], kids:['짧은 동화 쓰기','그림책 한 장면 만들기','좋아하는 이야기의 뒷이야기 만들기']},
+  {name:'의료 로봇 엔지니어', type:'미래 중요 직업', category:'디지털', tags:['로봇 조작하기','기계나 물건 고치기','코딩하기','실험하기','어려운 문제 해결하기','도구 활용력'], values:['사람을 돕는 것','새로운 것을 만드는 것'], work:'환자의 치료와 재활을 돕는 로봇을 설계하고 안전하게 작동하도록 만듭니다.', why:'기계와 코딩에 대한 관심을 사람의 건강을 돕는 일에 연결할 수 있습니다.', strengths:['문제 해결력','꼼꼼함','협동심'], kids:['간단한 로봇 키트 조립하기','재활을 돕는 도구 상상하기','기계의 움직임 관찰하기']},
+  {name:'푸드 스타일리스트', type:'잘 알려지지 않은 직업', category:'생활', tags:['요리하기','꾸미기','사진 찍기','만들기','섬세한 손기술','창의력'], values:['결과를 사람들에게 보여주는 것','새로운 것을 만드는 것'], work:'음식이 맛있고 아름답게 보이도록 꾸미고 촬영을 준비합니다.', why:'요리와 꾸미기, 사진 표현을 함께 좋아할 때 여러 흥미를 사용할 수 있습니다.', strengths:['창의력','섬세함','색과 모양 감각'], kids:['건강한 간식 예쁘게 담기','음식 사진 찍기','계절 식재료 조사하기']},
+  {name:'도시농업 코디네이터', type:'잘 알려지지 않은 직업', category:'자연', tags:['식물 기르기','요리하기','계획 세우기','여러 사람과 함께하기','환경 보호 활동하기'], values:['친구들과 함께하는 것','자연을 보호하는 것'], work:'도시의 옥상과 빈 공간에 텃밭을 만들고 주민들이 함께 가꾸도록 돕습니다.', why:'식물, 환경, 사람과 함께하는 활동을 한 번에 연결할 수 있습니다.', strengths:['계획력','협동심','책임감'], kids:['교실 화분 기르기','텃밭 계획표 만들기','먹거리 이동 거리 알아보기']},
+  {name:'사용자경험(UX) 디자이너', type:'미래 중요 직업', category:'디지털', tags:['그림 그리기','컴퓨터 사용하기','친구와 이야기하기','관찰하기','문제 해결력','공감','창의력'], values:['사람을 돕는 것','새로운 것을 만드는 것'], work:'앱이나 기계를 사람들이 쉽고 편하게 사용하도록 화면과 사용 방법을 설계합니다.', why:'사람의 불편함을 관찰하고 그림과 디지털 기술로 해결하는 힘을 사용할 수 있습니다.', strengths:['공감','관찰력','창의력'], kids:['자주 쓰는 앱의 좋은 점 찾기','불편한 물건 다시 그려 보기','친구에게 사용법 물어보기']},
+  {name:'스포츠 재활 트레이너', type:'친숙한 직업', category:'신체', tags:['운동하기','친구 도와주기','계획 세우기','꾸준함','책임감'], values:['사람을 돕는 것','즐겁게 활동하는 것'], work:'다친 사람이 안전하게 몸의 기능을 되찾도록 운동을 지도합니다.', why:'몸을 움직이는 것을 좋아하고 다른 사람의 회복을 돕고 싶을 때 어울릴 수 있습니다.', strengths:['관찰력','책임감','격려하는 힘'], kids:['바른 스트레칭 방법 알아보기','운동 전후 몸의 변화 기록하기','안전한 운동 규칙 만들기']},
+  {name:'문화재 디지털 복원가', type:'미래 중요 직업', category:'문화', tags:['사진 찍기','컴퓨터 사용하기','그림 그리기','새로운 것을 조사하기','꼼꼼한 관찰력'], values:['혼자 집중하는 것','새로운 것을 만드는 것'], work:'오래된 문화재를 사진과 3D 기술로 기록하고 원래 모습을 디지털로 되살립니다.', why:'역사와 그림, 디지털 기술, 꼼꼼한 관찰을 함께 사용할 수 있습니다.', strengths:['꼼꼼함','디지털 활용력','집중력'], kids:['우리 지역 문화재 조사하기','옛 건물 자세히 그리기','사진으로 변화 기록하기']},
+  {name:'해양 쓰레기 연구원', type:'미래 중요 직업', category:'자연', tags:['환경 보호 활동하기','실험하기','새로운 것을 조사하기','야외에서 활동하기','문제 해결력'], values:['자연을 보호하는 것','어려운 문제를 해결하는 것'], work:'바다 쓰레기가 어디서 오고 생물에게 어떤 영향을 주는지 연구해 줄이는 방법을 찾습니다.', why:'환경 문제를 조사하고 해결책을 찾고 싶은 흥미를 활용할 수 있습니다.', strengths:['탐구력','끈기','협동심'], kids:['플라스틱 사용 기록하기','하천과 바다의 연결 조사하기','재사용 아이디어 만들기']},
+  {name:'반려동물 영양상담사', type:'잘 알려지지 않은 직업', category:'자연', tags:['동물 돌보기','요리하기','계산하기','새로운 것을 조사하기','책임감'], values:['생명과 환경을 소중히 하는 것','사람을 돕는 것'], work:'동물의 나이와 건강에 맞는 먹이를 고르고 보호자에게 알려줍니다.', why:'동물을 좋아하면서 음식과 건강 정보를 꼼꼼히 살피는 힘을 활용할 수 있습니다.', strengths:['책임감','관찰력','설명하는 힘'], kids:['동물마다 먹이가 다른 이유 조사하기','영양표 읽어 보기','안전한 반려동물 돌봄 규칙 만들기']},
+  {name:'공연 무대기술자', type:'잘 알려지지 않은 직업', category:'예술', tags:['노래 부르기','악기 연주하기','춤추기','기계나 물건 고치기','여러 사람과 함께하기','도구 활용력'], values:['친구들과 함께하는 것','결과를 사람들에게 보여주는 것'], work:'공연의 조명, 소리, 무대 장치를 안전하게 설치하고 움직입니다.', why:'예술을 좋아하면서 도구와 기계를 다루고 팀으로 일하는 강점을 사용할 수 있습니다.', strengths:['협동심','책임감','도구 활용력'], kids:['학교 공연의 소리와 조명 관찰하기','간단한 무대 배치도 그리기','안전 점검표 만들기']},
+  {name:'우주식량 연구원', type:'미래 중요 직업', category:'과학', tags:['요리하기','실험하기','새로운 것을 조사하기','우주','창의력','문제 해결력'], values:['새로운 것을 만드는 것','어려운 문제를 해결하는 것'], work:'우주에서도 오래 보관하고 건강하게 먹을 수 있는 음식을 연구합니다.', why:'요리와 과학 실험, 미래에 대한 상상을 함께 활용할 수 있습니다.', strengths:['탐구력','창의력','꼼꼼함'], kids:['음식 보관 방법 비교하기','우주 식단 만들어 보기','건조 식품 관찰하기']},
+  {name:'메이커 교육가', type:'미래 중요 직업', category:'교육', tags:['만들기','코딩하기','로봇 조작하기','친구에게 설명하기','모둠 활동하기','창의력'], values:['사람을 돕는 것','새로운 것을 만드는 것','친구들과 함께하는 것'], work:'어린이와 어른이 도구, 코딩, 로봇으로 아이디어를 직접 만들도록 돕습니다.', why:'무언가를 만들고 다른 사람에게 방법을 알려주는 흥미를 함께 사용할 수 있습니다.', strengths:['창의력','설명하는 힘','안전 의식'], kids:['폐품으로 생활 도구 만들기','만드는 과정을 사진으로 설명하기','친구와 문제 해결 작품 만들기']},
+  {name:'여행 콘텐츠 제작자', type:'친숙한 직업', category:'표현', tags:['새로운 장소에 가기','사진 찍기','영상 만들기','글쓰기','친구를 즐겁게 해주기'], values:['새로운 장소를 경험하는 것','결과를 사람들에게 보여주는 것'], work:'여행지의 이야기와 정보를 사진, 글, 영상으로 소개합니다.', why:'새로운 장소를 경험하고 발견한 것을 다른 사람에게 즐겁게 전할 수 있습니다.', strengths:['관찰력','표현력','계획력'], kids:['우리 동네 여행 지도 만들기','장소 소개 영상 찍기','안전한 여행 계획 세우기']}
+];
+
+const futureHints = {
+  '인공지능과 로봇': {names:['로봇마음통역사','AI 안전길잡이','사람-로봇 협력설계사'], tasks:['로봇이 사람의 말을 잘 이해하는지 확인해요.','위험한 행동을 미리 찾아 안전 규칙을 만들어요.','사람과 로봇이 함께 일하는 방법을 교육해요.'], emoji:'🤖'},
+  '기후 변화': {names:['기후안전마을설계사','폭염쉼터기획자','탄소발자국탐정'], tasks:['지역의 기후 위험을 조사해요.','사람과 동물이 쉬는 안전 공간을 만들어요.','탄소를 줄일 방법을 찾아 알려요.'], emoji:'🌍'},
+  '미래의 학교': {names:['맞춤배움설계사','교실공간변신가','학습감정도우미'], tasks:['학생마다 알맞은 배움 방법을 찾아요.','다양한 활동이 가능한 교실을 만들어요.','배우며 느끼는 마음을 살피고 도와요.'], emoji:'🏫'},
+  '미래의 농촌': {names:['스마트농촌연결가','농촌드론돌봄사','지역먹거리기획자'], tasks:['농촌의 불편함을 기술로 해결해요.','드론으로 농작물과 길을 살펴요.','지역 먹거리를 사람들과 연결해요.'], emoji:'🌾'},
+  '우주여행': {names:['우주여행안전관','달기지생활설계사','우주쓰레기수거사'], tasks:['우주여행의 위험을 점검해요.','우주에서 편히 생활할 공간을 만들어요.','우주 쓰레기의 위치를 찾아 안전하게 치워요.'], emoji:'🚀'},
+  '해양 쓰레기': {names:['바다플라스틱추적가','해양생물구조설계사','파도쓰레기수거로봇사'], tasks:['쓰레기가 흘러온 길을 찾아요.','다친 해양생물을 안전하게 구조해요.','로봇으로 바다 쓰레기를 모아요.'], emoji:'🌊'},
+  '멸종위기 동물': {names:['야생동물통로설계사','생명소리기록가','서식지회복도우미'], tasks:['동물이 안전하게 이동할 길을 만들어요.','동물의 소리를 기록해 개체 수를 살펴요.','동물이 살 곳을 다시 건강하게 만들어요.'], emoji:'🐾'},
+  '고령화 사회': {names:['세대연결활동가','생활로봇훈련사','기억산책설계사'], tasks:['어린이와 어르신이 함께할 활동을 만들어요.','생활 로봇을 안전하게 사용하는 법을 알려요.','추억을 떠올릴 수 있는 공간과 활동을 만들어요.'], emoji:'🤝'},
+  '미래의 교통': {names:['하늘길교통정리사','무인차윤리설계사','어린이이동안전가'], tasks:['하늘을 나는 이동 수단의 길을 정리해요.','무인차가 안전하게 판단하는 규칙을 만들어요.','어린이가 안전하게 이동하는 길을 설계해요.'], emoji:'🚘'},
+  '가상현실': {names:['가상공간안전건축가','VR체험교사','디지털감각디자이너'], tasks:['가상공간의 위험한 부분을 점검해요.','가상현실로 안전한 배움 활동을 만들어요.','눈과 귀가 편안한 체험을 설계해요.'], emoji:'🥽'},
+  '재난과 안전': {names:['재난대피게임설계사','위험지역로봇탐색가','마을안전데이터관'], tasks:['재미있게 대피법을 익히는 게임을 만들어요.','사람 대신 로봇을 위험 지역에 보내요.','지역의 위험 정보를 모아 알려요.'], emoji:'🦺'},
+  '미래의 음식': {names:['대체식품맛연구가','음식물순환요리사','개인맞춤영양설계사'], tasks:['환경을 덜 해치는 새로운 음식을 연구해요.','남은 식재료를 안전하게 다시 활용해요.','사람의 건강에 맞는 식단을 만들어요.'], emoji:'🥗'},
+  '새로운 질병': {names:['감염지도분석가','원격건강도우미','생활방역제품설계사'], tasks:['질병이 퍼지는 모습을 지도에서 분석해요.','멀리 있는 사람의 건강 상태를 살펴요.','쉽고 안전한 방역 도구를 만들어요.'], emoji:'🧬'},
+  '에너지 부족': {names:['생활에너지절약설계사','햇빛저장연구가','학교전력탐정'], tasks:['전기를 아끼는 생활 공간을 설계해요.','햇빛 에너지를 오래 저장하는 방법을 연구해요.','학교에서 새는 전기를 찾아요.'], emoji:'⚡'},
+  '스마트 도시': {names:['도시감각데이터관','스마트쉼터설계사','보행약자길안내사'], tasks:['도시의 소리와 공기 정보를 모아 분석해요.','날씨와 사람에 맞게 변하는 쉼터를 만들어요.','누구나 안전하게 걷는 길을 안내해요.'], emoji:'🏙️'}
+};
+
+function blankProfile(nickname = '', id = '') {
+  return {
+    id,
+    nickname, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    completed: {interest:false, strength:false, ai:false, future:false, report:false},
+    interest: {selected:[], custom:'', fastTime:'', keepTrying:'', schoolFun:'', newLearn:'', mode:'', reasons:[], otherReason:'', top:[]},
+    strength: {cards:[], own:[], top:[], discovery:'', useAt:'', grow:'', thanks:''},
+    ai: {extra:'', values:[], recommendations:[], reactions:{}, expected:'', newJob:'', favorite:'', favoriteWhy:'', agree:'', mismatch:'', chosenActivity:''},
+    future: {topic:'', customTopic:'', change:'', problem:'', target:'', help:'', name:'', tasks:['','',''], tools:[], strengths:[], place:'', benefit:'', emoji:'✨', intro:'', published:false},
+    finalThoughts: {like:'', strength:'', job:'', reason:'', next:''}
+  };
+}
+
+function mergeProfile(base, incoming={}) {
+  const cardsSource = incoming?.strength?.cards;
+  const cards = Array.isArray(cardsSource) ? cardsSource : (cardsSource && typeof cardsSource === 'object' ? Object.values(cardsSource) : []);
+  return {
+    ...base,
+    ...incoming,
+    id: base.id,
+    nickname: base.nickname,
+    completed: {...base.completed, ...(incoming.completed||{})},
+    interest: {...base.interest, ...(incoming.interest||{})},
+    strength: {...base.strength, ...(incoming.strength||{}), cards},
+    ai: {...base.ai, ...(incoming.ai||{}), reactions:{...base.ai.reactions, ...(incoming?.ai?.reactions||{})}},
+    future: {...base.future, ...(incoming.future||{})},
+    finalThoughts: {...base.finalThoughts, ...(incoming.finalThoughts||{})}
+  };
+}
+
+function ensureClassProfiles(data={}) {
+  const sourceProfiles = data.profiles && typeof data.profiles === 'object' ? Object.values(data.profiles) : [];
+  const profiles = {};
+  for (const student of STUDENTS) {
+    const existing = data.profiles?.[student.id] || sourceProfiles.find(p => p && p.nickname === student.nickname) || {};
+    profiles[student.id] = mergeProfile(blankProfile(student.nickname, student.id), existing);
+  }
+  const validIds = new Set(STUDENTS.map(student => student.id));
+  const rawGallery = Array.isArray(data.gallery) ? data.gallery : (data.gallery && typeof data.gallery === 'object' ? Object.values(data.gallery) : []);
+  return {
+    currentId: validIds.has(data.currentId) ? data.currentId : null,
+    profiles,
+    gallery: rawGallery.filter(item => item && validIds.has(item.profileId))
+  };
+}
+
+function loadStore() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (parsed && parsed.profiles) return ensureClassProfiles(parsed);
+  } catch (error) { console.warn('저장 자료 읽기 실패', error); }
+  return ensureClassProfiles({currentId:null, profiles:{}, gallery:[]});
+}
+
+let store = loadStore();
+let currentView = store.currentId && store.profiles[store.currentId] ? 'dashboard' : 'welcome';
+const app = document.getElementById('app');
+const saveStatus = document.getElementById('saveStatus');
+const firebaseApp = initializeApp(firebaseConfig);
+const database = getDatabase(firebaseApp);
+let firebaseReady = false;
+let applyingRemote = false;
+
+function profile() { return store.currentId ? store.profiles[store.currentId] : null; }
+function escapeHTML(value='') { return String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c])); }
+function nowText() { return new Intl.DateTimeFormat('ko-KR',{hour:'2-digit',minute:'2-digit'}).format(new Date()); }
+function localSave(message='기기에 저장됨') {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+  saveStatus.textContent = `${message} · ${nowText()}`;
+}
+
+function remoteCardMap(cards=[]) {
+  return Object.fromEntries(cards.map(card => {
+    const writer = STUDENTS.find(student => student.nickname === card.friend);
+    return [writer?.id || card.friend, card];
+  }));
+}
+
+function remoteProfilePayload(p) {
+  return {...p, strength:{...p.strength, cards:remoteCardMap(p.strength.cards)}};
+}
+
+async function syncSection(section='profile', extra={}) {
+  if (!firebaseReady || applyingRemote) return;
+  const p = profile();
+  if (!p && !['full','clear'].includes(section)) return;
+  const base = `${FIREBASE_ROOT}/profiles/${p?.id || ''}`;
+  try {
+    if (section === 'interest') {
+      await update(ref(database, base), {interest:p.interest, 'completed/interest':p.completed.interest, updatedAt:p.updatedAt});
+    } else if (section === 'friendCard') {
+      const writer = STUDENTS.find(student => student.nickname === extra.friend);
+      await set(ref(database, `${base}/strength/cards/${writer?.id || extra.friend}`), extra.card);
+      await update(ref(database, base), {'strength/top':[], 'completed/strength':false, updatedAt:p.updatedAt});
+    } else if (section === 'deleteFriendCard') {
+      const writer = STUDENTS.find(student => student.nickname === extra.friend);
+      await remove(ref(database, `${base}/strength/cards/${writer?.id || extra.friend}`));
+      await update(ref(database, base), {'strength/top':[], 'completed/strength':false, updatedAt:p.updatedAt});
+    } else if (section === 'strength') {
+      await update(ref(database, base), {
+        'strength/own':p.strength.own,
+        'strength/top':p.strength.top,
+        'strength/discovery':p.strength.discovery,
+        'strength/useAt':p.strength.useAt,
+        'strength/grow':p.strength.grow,
+        'strength/thanks':p.strength.thanks || '',
+        'completed/strength':p.completed.strength,
+        updatedAt:p.updatedAt
+      });
+    } else if (section === 'ai') {
+      await update(ref(database, base), {ai:p.ai, 'completed/ai':p.completed.ai, updatedAt:p.updatedAt});
+    } else if (section === 'future') {
+      await update(ref(database, base), {future:p.future, 'completed/future':p.completed.future, updatedAt:p.updatedAt});
+      const galleryItem = store.gallery.find(item => item.profileId === p.id);
+      if (galleryItem) await set(ref(database, `${FIREBASE_ROOT}/gallery/${p.id}`), galleryItem);
+      else await remove(ref(database, `${FIREBASE_ROOT}/gallery/${p.id}`));
+    } else if (section === 'report') {
+      await update(ref(database, base), {finalThoughts:p.finalThoughts, 'completed/report':p.completed.report, updatedAt:p.updatedAt});
+    } else if (section === 'resetProfile') {
+      await set(ref(database, base), remoteProfilePayload(p));
+      await remove(ref(database, `${FIREBASE_ROOT}/gallery/${p.id}`));
+    } else if (section === 'full') {
+      const payloadProfiles = Object.fromEntries(Object.entries(store.profiles).map(([id,item]) => [id, remoteProfilePayload(item)]));
+      const payloadGallery = Object.fromEntries(store.gallery.map(item => [item.profileId, item]));
+      await set(ref(database, FIREBASE_ROOT), {profiles:payloadProfiles, gallery:payloadGallery, updatedAt:new Date().toISOString()});
+    }
+    saveStatus.textContent = `Firebase 저장 완료 · ${nowText()}`;
+  } catch (error) {
+    console.error('Firebase 저장 실패', error);
+    saveStatus.textContent = 'Firebase 저장 실패 · 기기에는 저장됨';
+  }
+}
+
+function saveStore(message='자동 저장됨', section='profile', extra={}) {
+  if (profile()) profile().updatedAt = new Date().toISOString();
+  localSave(message);
+  if (section !== 'local') syncSection(section, extra);
+}
+
+async function initializeFirebaseSync() {
+  saveStatus.textContent = 'Firebase 연결 중…';
+  try {
+    const rootRef = ref(database, FIREBASE_ROOT);
+    const snapshot = await get(rootRef);
+    const remote = snapshot.val();
+    firebaseReady = true;
+    if (remote?.profiles) {
+      const currentId = store.currentId;
+      applyingRemote = true;
+      store = ensureClassProfiles({...remote, currentId});
+      applyingRemote = false;
+      localSave('Firebase 자료 불러옴');
+      render();
+    } else {
+      await syncSection('full');
+    }
+    onValue(rootRef, snap => {
+      const value = snap.val();
+      if (!value?.profiles) return;
+      const currentId = store.currentId;
+      applyingRemote = true;
+      store = ensureClassProfiles({...value, currentId});
+      applyingRemote = false;
+      localSave('Firebase 동기화됨');
+      if (['welcome','dashboard','teacher','gallery'].includes(currentView)) render();
+    }, error => {
+      console.error('Firebase 실시간 읽기 실패', error);
+      saveStatus.textContent = 'Firebase 읽기 실패 · 기기 저장 사용 중';
+    });
+  } catch (error) {
+    console.error('Firebase 연결 실패', error);
+    firebaseReady = false;
+    saveStatus.textContent = 'Firebase 연결 실패 · 기기 저장 사용 중';
+  }
+}
+function toast(message) {
+  const el = document.getElementById('toast');
+  el.textContent = message; el.classList.add('show');
+  clearTimeout(toast.timer); toast.timer = setTimeout(()=>el.classList.remove('show'), 2200);
+}
+function setView(view) { currentView = view; render(); window.scrollTo({top:0,behavior:'smooth'}); setTimeout(()=>app.focus(),0); }
+
+function checkbox(name, value, checked=false, type='checkbox') {
+  return `<label class="choice"><input type="${type}" name="${name}" value="${escapeHTML(value)}" ${checked?'checked':''}><span>${escapeHTML(value)}</span></label>`;
+}
+function collect(name) { return [...document.querySelectorAll(`input[name="${CSS.escape(name)}"]:checked`)].map(el=>el.value); }
+function text(id) { return (document.getElementById(id)?.value || '').trim(); }
+function selected(id) { return document.getElementById(id)?.value || ''; }
+function activityProgress(p) {
+  return [p.completed.interest,p.completed.strength,p.completed.ai,p.completed.future,p.completed.report].filter(Boolean).length;
+}
+function stepHeader(index,title,subtitle) {
+  const labels=['흥미 찾기','강점 찾기','AI 추천','미래 직업','최종 보고서'];
+  return `<div class="page-head"><div><span class="eyebrow">탐험 ${index}</span><h1 class="page-title">${title}</h1><p class="page-subtitle">${subtitle}</p></div><button class="ghost-button no-print" data-view="dashboard">탐험 지도로</button></div>
+  <div class="progress-wrap"><div class="progress-track"><div class="progress-bar" style="width:${index*20}%"></div></div><div class="progress-labels">${labels.map((l,i)=>`<span class="${i<index?'done':''}">${i<index?'✓ ':''}${l}</span>`).join('')}</div></div>`;
+}
+
+function renderWelcome() {
+  const students = STUDENT_NAMES.map(name => Object.values(store.profiles).find(p => p.nickname === name)).filter(Boolean);
+  app.innerHTML = `<section class="hero">
+    <div><span class="eyebrow">꿈끼탐색 진로교육</span><h1>좋아하는 것에서<br>미래의 가능성을 찾아요.</h1><p>장래희망을 하나로 정하는 대신, 나의 흥미와 강점을 발견하고 다양한 직업을 탐험합니다.</p>
+      <section class="panel stack" style="margin-top:1.5rem" aria-labelledby="studentSelectTitle">
+        <div><h2 id="studentSelectTitle" style="margin:0">내 이름을 선택하세요</h2><p class="page-subtitle">이름을 누르면 저장된 탐험을 이어서 할 수 있어요.</p></div>
+        <div class="student-grid">${students.map(p=>`<button class="student-button" type="button" data-load-profile="${p.id}"><span>🧑‍🚀</span><strong>${escapeHTML(p.nickname)}</strong><small>${activityProgress(p)}/5 완료</small></button>`).join('')}</div>
+        <small class="helper">활동 내용은 Firebase와 이 기기의 브라우저에 함께 자동 저장됩니다.</small>
+      </section>
+    </div>
+    <div class="hero-visual" aria-hidden="true"><div class="planet">🌟</div><div class="float-badge one">💎 강점 발견</div><div class="float-badge two">🚀 미래 직업</div></div>
+  </section>
+  <section class="grid-4" style="margin-top:1.5rem">
+    ${[['🔎','흥미 보물찾기','내가 즐거워하는 활동을 찾아요.'],['💎','강점 발견하기','친구가 본 나의 좋은 힘을 모아요.'],['🤖','AI 직업 추천','흥미와 강점을 다양한 직업과 연결해요.'],['🚀','미래 직업 만들기','미래 문제를 해결할 새 직업을 상상해요.']].map(x=>`<article class="section-card"><div style="font-size:2rem">${x[0]}</div><h3>${x[1]}</h3><p class="page-subtitle">${x[2]}</p></article>`).join('')}
+  </section>`;
+}
+
+function renderDashboard() {
+  const p = profile(); if (!p) return renderWelcome();
+  const cards = [
+    {key:'interest',icon:'🔎',title:'나의 흥미 보물찾기',desc:'좋아하는 활동과 그 이유를 찾아보아요.',view:'interest'},
+    {key:'strength',icon:'💎',title:'친구가 찾아주는 나의 강점',desc:'친구의 눈으로 발견한 좋은 힘을 모아요.',view:'strength',requires:'interest'},
+    {key:'ai',icon:'🤖',title:'AI가 추천한 나의 직업',desc:'흥미와 강점을 다양한 직업과 연결해요.',view:'ai',requires:'strength'},
+    {key:'future',icon:'🚀',title:'미래의 직업 탐색',desc:'미래의 문제를 해결할 새 직업을 만들어요.',view:'future',requires:'ai'},
+    {key:'report',icon:'📘',title:'꿈끼 탐험 보고서',desc:'모든 탐험 결과를 한눈에 정리해요.',view:'report',requires:'future'}
+  ];
+  const progress = activityProgress(p);
+  app.innerHTML = `<div class="page-head"><div><span class="eyebrow">${escapeHTML(p.nickname)}</span><h1 class="page-title">${escapeHTML(p.nickname)}의 꿈끼 탐험 지도</h1><p class="page-subtitle">완료한 탐험은 자동 저장됩니다. 언제든 다시 들어와 내용을 고칠 수 있어요.</p></div><button id="switchProfile" class="ghost-button">다른 학생으로</button></div>
+  <div class="panel"><div style="display:flex;justify-content:space-between;gap:1rem"><strong>전체 진행률</strong><strong>${progress}/5 완료</strong></div><div class="progress-track" style="margin-top:.7rem"><div class="progress-bar" style="width:${progress*20}%"></div></div></div>
+  <section class="grid-3" style="margin-top:1.2rem">${cards.map((c,i)=>{const locked=c.requires&&!p.completed[c.requires]; const done=p.completed[c.key]; return `<article class="activity-card ${locked?'locked':''}"><span class="status-chip ${done?'done':''}">${done?'완료 ✓':locked?'잠김':'도전 가능'}</span><div class="icon">${c.icon}</div><h3>활동 ${i+1}. ${c.title}</h3><p>${c.desc}</p><button class="${locked?'ghost-button':'primary-button'}" data-view="${c.view}" ${locked?'disabled':''}>${done?'결과 다시 보기':i===4?'보고서 보기':'시작하기'}</button></article>`}).join('')}</section>
+  <section class="grid-2" style="margin-top:1.2rem"><article class="section-card"><h2>🏛️ 우리 반 미래 직업 전시관</h2><p class="page-subtitle">공개에 동의한 미래 직업 카드를 살펴보세요.</p><button class="secondary-button" data-view="gallery">전시관 둘러보기</button></article><article class="section-card"><h2>🔐 개인정보 안내</h2><p class="page-subtitle">활동 내용은 Firebase Realtime Database에 저장되어 여러 기기에서 이어서 사용할 수 있습니다.</p></article></section>`;
+}
+
+function renderInterest() {
+  const p=profile(), d=p.interest;
+  app.innerHTML = `${stepHeader(1,'나의 흥미 보물찾기','좋아하는 것 속에 숨어 있는 나만의 흥미 보물을 찾아요.')}
+  <form id="interestForm" class="stack-lg">
+    <section class="panel stack"><h2>1. 내가 좋아하는 활동</h2><p class="page-subtitle">마음에 드는 활동을 모두 고르세요. 최소 3개 이상 선택해 주세요.</p>
+      ${Object.entries(activityGroups).map(([group,items])=>`<div class="category-block"><h3>${group}</h3><div class="choice-grid">${items.map(v=>checkbox('activities',v,d.selected.includes(v))).join('')}</div></div>`).join('')}
+      <div class="field"><label for="customActivity">목록에 없는 활동</label><input id="customActivity" type="text" maxlength="40" value="${escapeHTML(d.custom)}" placeholder="직접 적어 보세요"></div>
+    </section>
+    <section class="panel stack"><h2>2. 좋아하는 순간 찾기</h2>
+      <div class="field"><label for="fastTime">시간이 빨리 지나간다고 느끼는 때는 언제인가요?</label><textarea id="fastTime" placeholder="예: 재미있는 책을 읽을 때">${escapeHTML(d.fastTime)}</textarea></div>
+      <div class="field"><label for="keepTrying">어려워도 계속 해보고 싶은 활동은 무엇인가요?</label><textarea id="keepTrying">${escapeHTML(d.keepTrying)}</textarea></div>
+      <div class="field"><label for="schoolFun">학교에서 가장 재미있는 시간이나 활동은 무엇인가요?</label><textarea id="schoolFun">${escapeHTML(d.schoolFun)}</textarea></div>
+      <div class="field"><label for="newLearn">앞으로 새롭게 배우거나 경험해 보고 싶은 것은 무엇인가요?</label><textarea id="newLearn">${escapeHTML(d.newLearn)}</textarea></div>
+      <fieldset class="field"><legend>어떤 방법으로 활동하는 것을 좋아하나요?</legend><div class="choice-grid">${['혼자 집중해서 활동하기','친구들과 함께 활동하기','혼자와 함께 모두 좋아함','활동에 따라 달라짐'].map(v=>checkbox('mode',v,d.mode===v,'radio')).join('')}</div></fieldset>
+    </section>
+    <section class="panel stack"><h2>3. 좋아하는 이유</h2><div class="choice-grid">${reasonOptions.map(v=>checkbox('reasons',v,d.reasons.includes(v))).join('')}</div><div class="field"><label for="otherReason">다른 이유</label><input id="otherReason" type="text" value="${escapeHTML(d.otherReason)}"></div></section>
+    <section class="panel stack"><h2>4. 대표 흥미 보물 3개</h2><p class="page-subtitle">위에서 고른 활동 중 가장 나를 잘 보여 주는 활동 3개를 고르세요.</p><div id="topInterestChoices" class="choice-grid"></div><div id="topInterestNotice" class="notice info">활동을 선택하면 여기에 대표 흥미 선택지가 나타납니다.</div></section>
+    <div class="button-row end"><button type="button" class="ghost-button" data-view="dashboard">나중에 하기</button><button type="submit" class="primary-button">결과 저장하고 다음으로</button></div>
+  </form>`;
+  updateTopInterestChoices(d.top);
+  document.querySelectorAll('input[name="activities"]').forEach(el=>el.addEventListener('change',()=>updateTopInterestChoices(collect('topInterests'))));
+  document.getElementById('customActivity').addEventListener('input',()=>updateTopInterestChoices(collect('topInterests')));
+}
+
+function updateTopInterestChoices(previous=[]) {
+  const wrap=document.getElementById('topInterestChoices'); if(!wrap)return;
+  const selectedActivities=collect('activities'); const custom=text('customActivity');
+  const options=[...selectedActivities,...(custom?[custom]:[])];
+  wrap.innerHTML=options.map(v=>checkbox('topInterests',v,previous.includes(v))).join('');
+  const notice=document.getElementById('topInterestNotice'); notice.style.display=options.length?'none':'block';
+}
+
+function renderStrength() {
+  const p=profile(), d=p.strength;
+  const friendOptions = STUDENT_NAMES.filter(name => name !== p.nickname);
+  app.innerHTML = `${stepHeader(2,'친구 강점 카드 작성',`${p.nickname}의 멋진 강점을 친구의 눈으로 찾아보아요.`)}
+  <div class="notice"><strong>지금은 ${escapeHTML(p.nickname)}에게 강점 카드를 쓰는 화면입니다.</strong><br>카드를 쓰는 친구의 이름을 선택하고, 평소에 본 구체적인 행동을 떠올려 주세요.</div>
+  <section class="grid-2" style="margin-top:1rem"><form id="friendCardForm" class="panel stack"><h2>친구 강점 카드 작성</h2>
+    <div class="field"><label for="friendName">강점 카드를 작성한 친구</label><select id="friendName" required><option value="">이름을 선택하세요</option>${friendOptions.map(name=>`<option value="${escapeHTML(name)}">${escapeHTML(name)}</option>`).join('')}</select></div>
+    <fieldset class="field"><legend>${escapeHTML(p.nickname)}에게 어울리는 강점 3~5개</legend>${Object.entries(strengthGroups).map(([g,items])=>`<div class="category-block"><strong>${g}</strong><div class="choice-grid" style="margin-top:.6rem">${items.map(v=>checkbox('friendStrengths',v)).join('')}</div></div>`).join('')}</fieldset>
+    <div class="field"><label for="friendReason">강점을 발견한 장면</label><textarea id="friendReason" required placeholder="예: 어려운 만들기를 포기하지 않고 끝까지 완성했을 때 끈기가 있다고 생각했습니다."></textarea></div>
+    <button class="primary-button" type="submit">강점 카드 보내기</button>
+  </form>
+  <section class="panel stack"><h2>${escapeHTML(p.nickname)}에게 도착한 강점 카드</h2><div id="strengthCards">${d.cards.length?d.cards.map((c,i)=>`<article class="section-card"><div style="display:flex;justify-content:space-between;gap:.6rem"><strong>${escapeHTML(c.friend)}의 카드</strong><button class="danger-button" data-delete-card="${i}" type="button">삭제</button></div><div class="tag-list" style="margin:.7rem 0">${c.strengths.map(s=>`<span class="tag green">${escapeHTML(s)}</span>`).join('')}</div><p>${escapeHTML(c.reason)}</p></article>`).join(''):'<div class="empty">아직 도착한 강점 카드가 없어요.</div>'}</div></section></section>
+  <div class="button-row end"><button type="button" class="ghost-button" data-view="dashboard">탐험 지도로</button><button type="button" class="primary-button" data-view="strengthResult">나의 대표 강점 정하기</button></div>`;
+}
+
+function renderStrengthResult() {
+  const p=profile(), d=p.strength;
+  app.innerHTML = `${stepHeader(2,'나의 대표 강점 정하기','친구들이 발견한 강점을 살펴보고 나를 잘 보여 주는 강점 3개를 골라요.')}
+  <div class="notice info">친구 강점 카드를 더 받거나 고치려면 아래의 ‘친구 강점 카드 화면’ 버튼을 누르세요.</div>
+  <form id="strengthResultForm" class="panel stack" style="margin-top:1rem"><h2>${escapeHTML(p.nickname)}의 강점 보석</h2>
+    <section class="section-card"><h3 style="margin-top:0">친구들이 찾아준 강점</h3>${d.cards.length?`<div class="tag-list">${[...new Set(d.cards.flatMap(c=>c.strengths))].map(v=>`<span class="tag green">${escapeHTML(v)}</span>`).join('')}</div>`:'<div class="empty">아직 도착한 강점 카드가 없어요. 먼저 친구 강점 카드를 받아 보세요.</div>'}</section>
+    <fieldset class="field"><legend>내가 생각한 나의 강점</legend><div class="choice-grid">${Object.values(strengthGroups).flat().map(v=>checkbox('ownStrengths',v,d.own.includes(v))).join('')}</div></fieldset>
+    <fieldset class="field"><legend>친구가 찾아준 강점 중 대표 강점 3개</legend><div id="topStrengthChoices" class="choice-grid"></div><div id="noStrengthNotice" class="notice info">먼저 친구 강점 카드를 받아 보세요.</div></fieldset>
+    <div class="grid-2"><div class="field"><label for="discovery">새롭게 알게 된 나의 강점</label><textarea id="discovery">${escapeHTML(d.discovery)}</textarea></div><div class="field"><label for="useAt">이 강점을 사용해 보고 싶은 활동</label><textarea id="useAt">${escapeHTML(d.useAt)}</textarea></div></div>
+    <div class="field"><label for="grow">앞으로 더 키우고 싶은 강점</label><input id="grow" type="text" value="${escapeHTML(d.grow)}"></div>
+    <div class="button-row end"><button type="button" class="ghost-button" data-view="strength">친구 강점 카드 화면</button><button type="submit" class="primary-button">강점 저장하고 AI 추천받기</button></div>
+  </form>`;
+  updateTopStrengthChoices();
+}
+
+function updateTopStrengthChoices() {
+  const p=profile(), options=[...new Set(p.strength.cards.flatMap(c=>c.strengths))];
+  const wrap=document.getElementById('topStrengthChoices'); if(!wrap)return;
+  wrap.innerHTML=options.map(v=>checkbox('topStrengths',v,p.strength.top.includes(v))).join('');
+  document.getElementById('noStrengthNotice').style.display=options.length?'none':'block';
+}
+
+function scoreCareer(c,p) {
+  const inputs=[...p.interest.selected,...p.interest.top,...p.strength.top,...p.strength.own];
+  let score=0;
+  for(const tag of c.tags) for(const input of inputs) if(input.includes(tag)||tag.includes(input)) score+=3;
+  for(const value of p.ai.values) if(c.values.includes(value)) score+=4;
+  const textPool=[p.interest.fastTime,p.interest.keepTrying,p.interest.schoolFun,p.interest.newLearn,p.ai.extra].join(' ');
+  for(const tag of c.tags) if(textPool.includes(tag.replace(/하기$/,''))) score+=1;
+  return score + Math.random()*.3;
+}
+
+function generateRecommendations(p) {
+  const ranked=careers.map(c=>({...c,score:scoreCareer(c,p)})).sort((a,b)=>b.score-a.score);
+  const chosen=[]; const types=['친숙한 직업','잘 알려지지 않은 직업','미래 중요 직업'];
+  types.forEach(type=>{const candidate=ranked.find(c=>c.type===type&&!chosen.some(x=>x.name===c.name)); if(candidate)chosen.push(candidate);});
+  for(const c of ranked) {
+    if(chosen.length>=5)break;
+    const categoryCount=chosen.filter(x=>x.category===c.category).length;
+    if(!chosen.some(x=>x.name===c.name)&&categoryCount<2) chosen.push(c);
+  }
+  return chosen.slice(0,5).map(({score,...c})=>c);
+}
+
+function renderAI() {
+  const p=profile(), d=p.ai;
+  app.innerHTML = `${stepHeader(3,'AI가 분석하여 추천한 나의 직업','AI는 직업을 정해 주지 않아요. 몰랐던 가능성을 발견하도록 돕습니다.')}
+  <div class="notice info"><strong>AI 분석용 기본 원칙</strong><br>학생의 흥미와 강점을 바탕으로 다양한 분야의 직업 5개를 추천하며, 성별 고정관념이나 미래를 단정하는 표현을 사용하지 않습니다.</div>
+  <section class="grid-2" style="margin-top:1rem"><article class="panel stack"><h2>AI에게 보낼 나의 탐험 자료</h2><div><strong>대표 흥미</strong><div class="tag-list">${p.interest.top.map(v=>`<span class="tag gold">${escapeHTML(v)}</span>`).join('')}</div></div><div><strong>대표 강점</strong><div class="tag-list">${p.strength.top.map(v=>`<span class="tag green">${escapeHTML(v)}</span>`).join('')}</div></div><div class="field"><label for="aiExtra">내가 해보고 싶은 활동</label><textarea id="aiExtra">${escapeHTML(d.extra||p.interest.newLearn)}</textarea></div></article>
+    <form id="aiInputForm" class="panel stack"><h2>내가 중요하게 생각하는 것</h2><p class="page-subtitle">최대 3개를 고르세요.</p><div class="choice-grid">${valueOptions.map(v=>checkbox('values',v,d.values.includes(v))).join('')}</div><button class="primary-button" type="submit">${d.recommendations.length?'직업 5개 다시 추천받기':'AI 분석 시작하기'}</button></form></section>
+  <section id="aiResults" style="margin-top:1rem">${d.recommendations.length?renderCareerResults(d.recommendations,p):'<div class="empty">중요하게 생각하는 것을 고르고 AI 분석을 시작해 보세요.</div>'}</section>`;
+}
+
+function renderCareerResults(list,p) {
+  return `<div class="page-head"><div><h2>🌟 ${escapeHTML(p.nickname)}에게 추천하는 직업 탐험 카드</h2><p class="page-subtitle">친숙한 직업, 잘 알려지지 않은 직업, 미래에 중요해질 직업을 골고루 담았습니다.</p></div></div>
+  <div class="grid-2">${list.map((c,i)=>`<article class="career-card"><div class="career-type">${escapeHTML(c.type)}</div><h3>${i+1}. ${escapeHTML(c.name)}</h3><dl><dt>하는 일</dt><dd>${escapeHTML(c.work)}</dd><dt>추천한 이유</dt><dd>${escapeHTML(c.why)}</dd><dt>필요한 강점</dt><dd><div class="tag-list">${c.strengths.map(s=>`<span class="tag green">${escapeHTML(s)}</span>`).join('')}</div></dd><dt>초등학생 때 해볼 수 있는 활동</dt><dd><ul>${c.kids.map(a=>`<li>${escapeHTML(a)}</li>`).join('')}</ul></dd></dl><fieldset class="field"><legend>이 직업에 대한 생각</legend><select data-reaction="${escapeHTML(c.name)}"><option value="">선택하세요</option>${['매우 궁금해요','조금 더 알아보고 싶어요','나와는 조금 다른 것 같아요','처음 알게 된 직업이에요'].map(v=>`<option ${p.ai.reactions[c.name]===v?'selected':''}>${v}</option>`).join('')}</select></fieldset></article>`).join('')}</div>
+  <form id="aiReflectionForm" class="panel stack" style="margin-top:1rem"><h2>추천 결과 돌아보기</h2><div class="grid-2"><div class="field"><label for="expected">예상했던 직업이 있었나요?</label><input id="expected" type="text" value="${escapeHTML(p.ai.expected)}"></div><div class="field"><label for="newJob">처음 알게 된 직업</label><input id="newJob" type="text" value="${escapeHTML(p.ai.newJob)}"></div></div>
+  <div class="field"><label for="favorite">가장 관심이 가는 직업</label><select id="favorite"><option value="">선택하세요</option>${list.map(c=>`<option ${p.ai.favorite===c.name?'selected':''}>${escapeHTML(c.name)}</option>`).join('')}</select></div>
+  <div class="field"><label for="favoriteWhy">그 직업에 관심이 가는 이유</label><textarea id="favoriteWhy">${escapeHTML(p.ai.favoriteWhy)}</textarea></div>
+  <div class="grid-2"><div class="field"><label for="agree">AI가 추천한 이유에 동의하나요?</label><select id="agree"><option value="">선택하세요</option>${['매우 동의해요','조금 동의해요','잘 모르겠어요','동의하지 않아요'].map(v=>`<option ${p.ai.agree===v?'selected':''}>${v}</option>`).join('')}</select></div><div class="field"><label for="mismatch">나와 잘 맞지 않는 직업과 이유</label><textarea id="mismatch">${escapeHTML(p.ai.mismatch)}</textarea></div></div>
+  <div class="field"><label for="chosenActivity">직업 카드에서 해보고 싶은 활동</label><input id="chosenActivity" type="text" value="${escapeHTML(p.ai.chosenActivity)}" placeholder="예: 동물 관찰 일지 쓰기"></div>
+  <div class="notice success">이 추천은 정답이 아니라 다양한 가능성을 탐색하기 위한 자료입니다.</div>
+  <div class="button-row end"><button type="button" class="ghost-button" data-view="dashboard">나중에 하기</button><button type="submit" class="primary-button">결과 저장하고 미래로 출발</button></div></form>`;
+}
+
+function renderFuture() {
+  const p=profile(), d=p.future;
+  const topic=d.customTopic||d.topic; const hint=futureHints[d.topic]||null;
+  app.innerHTML = `${stepHeader(4,'미래의 직업 탐색','미래 사회의 문제를 해결할 아직 세상에 없는 직업을 만들어 보아요.')}
+  <form id="futureForm" class="stack-lg"><section class="panel stack"><h2>1. 관심 있는 미래의 모습</h2><div class="choice-grid">${futureTopics.map(v=>checkbox('futureTopic',v,d.topic===v,'radio')).join('')}</div><div class="field"><label for="customTopic">목록에 없는 주제</label><input id="customTopic" type="text" value="${escapeHTML(d.customTopic)}"></div></section>
+  <section class="panel stack"><h2>2. 미래의 변화 생각하기</h2><div class="field"><label for="futureChange">어떤 변화가 일어날까요?</label><textarea id="futureChange">${escapeHTML(d.change)}</textarea></div><div class="field"><label for="futureProblem">그 변화로 어떤 문제가 생길 수 있을까요?</label><textarea id="futureProblem">${escapeHTML(d.problem)}</textarea></div><fieldset class="field"><legend>가장 불편하거나 힘들어지는 대상</legend><div class="choice-grid">${audienceOptions.map(v=>checkbox('futureTarget',v,d.target===v,'radio')).join('')}</div></fieldset><div class="field"><label for="futureHelp">문제를 해결하기 위해 어떤 도움이 필요할까요?</label><textarea id="futureHelp">${escapeHTML(d.help)}</textarea></div></section>
+  <section class="panel stack"><div class="page-head" style="margin-bottom:0"><div><h2>3. 미래 직업 만들기</h2><p class="page-subtitle">AI 아이디어 도우미는 생각의 씨앗만 줍니다. 마음에 드는 부분을 나의 생각으로 바꾸세요.</p></div><button id="futureHintBtn" class="secondary-button" type="button">AI 아이디어 도움받기</button></div>
+  <div id="futureHintBox">${hint?renderFutureHint(hint):''}</div>
+  <div class="grid-2"><div class="field"><label for="futureName">미래 직업 이름</label><input id="futureName" type="text" value="${escapeHTML(d.name)}" required></div><div class="field"><label for="futureEmoji">직업을 상징하는 아이콘</label><select id="futureEmoji">${['✨','🤖','🌍','🚀','🌊','🐾','⚡','🧬','🏙️','🦺','🥗','🎨','🔬','🛠️'].map(v=>`<option ${d.emoji===v?'selected':''}>${v}</option>`).join('')}</select></div></div>
+  <div class="field"><label>이 직업의 주요 업무 3가지</label>${[0,1,2].map(i=>`<input id="futureTask${i}" type="text" value="${escapeHTML(d.tasks[i])}" placeholder="${i+1}. 어떤 일을 하나요?">`).join('')}</div>
+  <fieldset class="field"><legend>사용하는 도구나 기술</legend><div class="choice-grid">${futureTools.map(v=>checkbox('futureTools',v,d.tools.includes(v))).join('')}</div></fieldset>
+  <fieldset class="field"><legend>필요한 강점</legend><div class="choice-grid">${[...new Set([...p.strength.top,'관찰력','창의력','책임감','배려심','끈기','협동심','문제 해결 능력','의사소통 능력','용기','집중력','꼼꼼함','새로운 것을 배우는 힘'])].map(v=>checkbox('futureStrengths',v,d.strengths.includes(v))).join('')}</div></fieldset>
+  <fieldset class="field"><legend>일하는 장소</legend><div class="choice-grid">${workPlaces.map(v=>checkbox('workPlace',v,d.place===v,'radio')).join('')}</div></fieldset>
+  <div class="field"><label for="futureBenefit">이 직업이 생기면 좋아지는 점</label><textarea id="futureBenefit">${escapeHTML(d.benefit)}</textarea></div>
+  <div class="field"><label for="futureIntro">직업 소개 문장</label><textarea id="futureIntro" placeholder="제가 만든 미래의 직업은 ...입니다.">${escapeHTML(d.intro)}</textarea></div>
+  <label class="choice"><input id="publishFuture" type="checkbox" ${d.published?'checked':''}><span>우리 반 미래 직업 전시관에 공개할래요.</span></label>
+  </section><div class="button-row end"><button type="button" class="ghost-button" data-view="dashboard">나중에 하기</button><button type="submit" class="primary-button">미래 직업 저장하고 보고서 완성</button></div></form>`;
+}
+
+function renderFutureHint(hint) {
+  return `<div class="notice info"><strong>아이디어 씨앗</strong><div class="tag-list" style="margin:.6rem 0">${hint.names.map(n=>`<button type="button" class="secondary-button hint-name" data-hint-name="${escapeHTML(n)}">${escapeHTML(n)}</button>`).join('')}</div><ul>${hint.tasks.map(t=>`<li>${escapeHTML(t)}</li>`).join('')}</ul></div>`;
+}
+
+function renderReport() {
+  const p=profile(), f=p.future;
+  const rec=p.ai.recommendations;
+  app.innerHTML = `${stepHeader(5,'나의 꿈끼 탐험 보고서','나의 흥미, 강점, 직업 탐험과 미래 직업을 한눈에 살펴보아요.')}
+  <article class="report"><header class="report-cover"><div style="font-size:3.5rem">📘</div><h1>${escapeHTML(p.nickname)}의 꿈끼 탐험 보고서</h1><p>${new Intl.DateTimeFormat('ko-KR',{dateStyle:'long'}).format(new Date())}</p></header><div class="report-body">
+  <section class="report-section"><h2>🔎 내가 좋아하는 것</h2><div class="tag-list">${p.interest.top.map(v=>`<span class="tag gold">${escapeHTML(v)}</span>`).join('')}</div><p><strong>좋아하는 이유:</strong> ${escapeHTML([...p.interest.reasons,p.interest.otherReason].filter(Boolean).join(', ')||'아직 입력하지 않았어요.')}</p><p><strong>새롭게 해보고 싶은 활동:</strong> ${escapeHTML(p.interest.newLearn||'아직 입력하지 않았어요.')}</p><p><strong>선호하는 활동 방식:</strong> ${escapeHTML(p.interest.mode||'아직 선택하지 않았어요.')}</p></section>
+  <section class="report-section"><h2>💎 내가 가진 강점</h2><div class="tag-list">${p.strength.top.map(v=>`<span class="tag green">${escapeHTML(v)}</span>`).join('')}</div><p><strong>새롭게 알게 된 강점:</strong> ${escapeHTML(p.strength.discovery||'아직 입력하지 않았어요.')}</p><p><strong>더 키우고 싶은 강점:</strong> ${escapeHTML(p.strength.grow||'아직 입력하지 않았어요.')}</p></section>
+  <section class="report-section"><h2>🤖 AI가 추천한 직업</h2><div class="grid-2">${rec.map(c=>`<div class="section-card"><strong>${escapeHTML(c.name)}</strong><p class="page-subtitle">${escapeHTML(c.work)}</p></div>`).join('')}</div><p><strong>가장 관심 있는 직업:</strong> ${escapeHTML(p.ai.favorite||'아직 선택하지 않았어요.')}</p><p><strong>관심을 가진 이유:</strong> ${escapeHTML(p.ai.favoriteWhy||'아직 입력하지 않았어요.')}</p><p><strong>해보고 싶은 진로 활동:</strong> ${escapeHTML(p.ai.chosenActivity||'아직 입력하지 않았어요.')}</p></section>
+  <section class="report-section"><h2>🚀 내가 만든 미래 직업</h2><div class="future-poster"><div class="future-emoji">${escapeHTML(f.emoji)}</div><div><h3 style="font-size:1.7rem;margin-top:0">${escapeHTML(f.name||'이름을 정하지 않았어요')}</h3><p><strong>미래 주제:</strong> ${escapeHTML(f.customTopic||f.topic)}</p><p><strong>해결하려는 문제:</strong> ${escapeHTML(f.problem||'아직 입력하지 않았어요.')}</p><p><strong>도움을 주는 대상:</strong> ${escapeHTML(f.target||'아직 선택하지 않았어요.')}</p><p><strong>주요 업무:</strong></p><ol>${f.tasks.filter(Boolean).map(t=>`<li>${escapeHTML(t)}</li>`).join('')}</ol><p><strong>필요한 강점:</strong> ${escapeHTML(f.strengths.join(', '))}</p><p><strong>좋아지는 점:</strong> ${escapeHTML(f.benefit||'아직 입력하지 않았어요.')}</p></div></div></section>
+  <section class="report-section"><h2>✍️ 나의 마지막 생각</h2><form id="finalThoughtForm" class="stack"><div class="field"><label for="finalLike">이번 활동을 통해 나는 무엇을 좋아한다는 것을 알게 되었나요?</label><input id="finalLike" type="text" value="${escapeHTML(p.finalThoughts.like)}"></div><div class="field"><label for="finalStrength">친구들은 나에게 어떤 강점이 있다고 했나요?</label><input id="finalStrength" type="text" value="${escapeHTML(p.finalThoughts.strength)}"></div><div class="field"><label for="finalJob">가장 관심이 생긴 직업</label><input id="finalJob" type="text" value="${escapeHTML(p.finalThoughts.job||p.ai.favorite)}"></div><div class="field"><label for="finalReason">그 이유</label><textarea id="finalReason">${escapeHTML(p.finalThoughts.reason||p.ai.favoriteWhy)}</textarea></div><div class="field"><label for="finalNext">앞으로 더 배우거나 경험해 보고 싶은 것</label><textarea id="finalNext">${escapeHTML(p.finalThoughts.next||p.interest.newLearn)}</textarea></div><button class="primary-button no-print" type="submit">마지막 생각 저장하기</button></form><div class="notice success" style="margin-top:1rem">아직 나의 미래 직업을 정하지 않았지만, 다양한 가능성을 계속 탐색할 수 있어요.</div></section></div></article>
+  <div class="button-row end no-print"><button id="printReport" class="primary-button">인쇄·PDF 저장</button><button id="downloadReport" class="secondary-button">활동 자료(JSON) 저장</button><button class="ghost-button" data-view="dashboard">탐험 지도로</button></div>`;
+}
+
+function renderGallery() {
+  const items=store.gallery;
+  app.innerHTML = `<div class="page-head"><div><span class="eyebrow">함께 보는 작품</span><h1 class="page-title">우리 반 미래 직업 박람회</h1><p class="page-subtitle">순위나 점수 없이 서로의 멋진 아이디어를 감상해요.</p></div><button class="ghost-button" data-view="dashboard">탐험 지도로</button></div>
+  ${items.length?`<section class="grid-3">${items.map((x,i)=>`<article class="activity-card"><div class="icon">${escapeHTML(x.emoji||'✨')}</div><h3>${escapeHTML(x.name)}</h3><p><strong>${escapeHTML(x.nickname)}</strong>의 아이디어</p><p>${escapeHTML(x.problem)}</p><div class="tag-list">${x.strengths.map(s=>`<span class="tag green">${escapeHTML(s)}</span>`).join('')}</div><div class="button-row"><button class="secondary-button gallery-react" data-index="${i}" data-reaction="멋진 생각이에요">👏 멋진 생각</button><button class="secondary-button gallery-react" data-index="${i}" data-reaction="더 궁금해요">💡 더 궁금해요</button></div><small class="helper">반응 ${x.reactions||0}개</small></article>`).join('')}</section>`:'<div class="empty">아직 공개된 미래 직업 카드가 없어요.</div>'}`;
+}
+
+function renderTeacher() {
+  const profiles=Object.values(store.profiles).sort((a,b)=>a.nickname.localeCompare(b.nickname,'ko'));
+  app.innerHTML = `<div class="page-head"><div><span class="eyebrow">교사용 관리 화면 · Firebase 연동</span><h1 class="page-title">학생 진행 상황</h1><p class="page-subtitle">Firebase에 저장된 학급 학생의 진행 상황을 표시합니다.</p></div><button class="ghost-button" data-view="${profile()?'dashboard':'welcome'}">돌아가기</button></div>
+  <div class="notice">현재는 이름 선택 방식으로 접속합니다. 실제 운영 전에는 Firebase 보안 규칙과 학생·교사 인증을 반드시 설정하세요.</div>
+  <section class="panel" style="margin-top:1rem"><div class="table-wrap"><table><thead><tr><th>학생</th><th>흥미</th><th>강점</th><th>AI 추천</th><th>미래 직업</th><th>보고서</th><th>관리</th></tr></thead><tbody>${profiles.map(p=>`<tr><td><strong>${escapeHTML(p.nickname)}</strong></td>${['interest','strength','ai','future','report'].map(k=>`<td>${p.completed[k]?'✅ 완료':'▫️ 미완료'}</td>`).join('')}<td><button class="secondary-button" data-teacher-open="${p.id}">열기</button> <button class="danger-button" data-reset-profile="${p.id}">초기화</button></td></tr>`).join('')||'<tr><td colspan="7">저장된 학생이 없습니다.</td></tr>'}</tbody></table></div><div class="button-row"><button id="exportAll" class="secondary-button">전체 자료 내보내기</button><button id="clearAll" class="danger-button">학급 전체 자료 초기화</button></div></section>`;
+}
+
+function render() {
+  const views={welcome:renderWelcome,dashboard:renderDashboard,interest:renderInterest,strength:renderStrength,strengthResult:renderStrengthResult,ai:renderAI,future:renderFuture,report:renderReport,gallery:renderGallery,teacher:renderTeacher};
+  (views[currentView]||renderWelcome)(); bindEvents();
+}
+
+function bindEvents() {
+  document.querySelectorAll('[data-view]').forEach(el=>el.addEventListener('click',()=>setView(el.dataset.view)));
+  document.querySelectorAll('[data-load-profile]').forEach(el=>el.addEventListener('click',()=>{store.currentId=el.dataset.loadProfile;saveStore('탐험 불러옴','local');setView('dashboard');}));
+  document.getElementById('switchProfile')?.addEventListener('click',()=>{store.currentId=null;saveStore('학생 전환','local');setView('welcome');});
+  document.getElementById('interestForm')?.addEventListener('submit',saveInterest);
+  document.getElementById('friendCardForm')?.addEventListener('submit',saveFriendCard);
+  document.querySelectorAll('[data-delete-card]').forEach(el=>el.addEventListener('click',()=>{const card=profile().strength.cards[Number(el.dataset.deleteCard)];profile().strength.cards.splice(Number(el.dataset.deleteCard),1);profile().strength.top=[];profile().completed.strength=false;saveStore('강점 카드 삭제됨','deleteFriendCard',{friend:card?.friend||''});renderStrength();}));
+  document.getElementById('strengthResultForm')?.addEventListener('submit',saveStrengthResult);
+  document.getElementById('aiInputForm')?.addEventListener('submit',runAI);
+  document.getElementById('aiReflectionForm')?.addEventListener('submit',saveAIReflection);
+  document.querySelectorAll('[data-reaction]').forEach(el=>{if(el.tagName==='SELECT')el.addEventListener('change',()=>{profile().ai.reactions[el.dataset.reaction]=el.value;saveStore('관심 표시 저장됨','ai');});});
+  document.getElementById('futureHintBtn')?.addEventListener('click',showFutureHint);
+  document.querySelectorAll('.hint-name').forEach(el=>el.addEventListener('click',()=>{document.getElementById('futureName').value=el.dataset.hintName;}));
+  document.getElementById('futureForm')?.addEventListener('submit',saveFuture);
+  document.getElementById('finalThoughtForm')?.addEventListener('submit',saveFinalThoughts);
+  document.getElementById('printReport')?.addEventListener('click',()=>window.print());
+  document.getElementById('downloadReport')?.addEventListener('click',()=>downloadJSON(profile(),`${profile().nickname}-꿈끼탐험보고서.json`));
+  document.querySelectorAll('.gallery-react').forEach(el=>el.addEventListener('click',async()=>{const item=store.gallery[Number(el.dataset.index)];item.reactions=(item.reactions||0)+1;localSave('반응 저장됨');if(firebaseReady){try{await runTransaction(ref(database,`${FIREBASE_ROOT}/gallery/${item.profileId}/reactions`),value=>(value||0)+1);}catch(error){console.error('반응 저장 실패',error);}}toast(el.dataset.reaction);renderGallery();}));
+  document.querySelectorAll('[data-teacher-open]').forEach(el=>el.addEventListener('click',()=>{store.currentId=el.dataset.teacherOpen;saveStore('학생 자료 열기','local');setView('dashboard');}));
+  document.querySelectorAll('[data-reset-profile]').forEach(el=>el.addEventListener('click',()=>{if(confirm('이 학생의 모든 활동 내용을 초기화할까요?')){const id=el.dataset.resetProfile;const old=store.profiles[id];store.profiles[id]=blankProfile(old.nickname,id);store.gallery=store.gallery.filter(item=>item.profileId!==id);const previousCurrent=store.currentId;store.currentId=id;saveStore('학생 자료 초기화됨','resetProfile');store.currentId=previousCurrent===id?null:previousCurrent;localSave('초기화됨');renderTeacher();}}));
+  document.getElementById('exportAll')?.addEventListener('click',()=>downloadJSON(store,'꿈끼탐험대-전체자료.json'));
+  document.getElementById('clearAll')?.addEventListener('click',async()=>{if(confirm('Firebase와 이 기기에 저장된 학급 전체 활동 자료를 초기화할까요? 되돌릴 수 없습니다.')){store=ensureClassProfiles({currentId:null,profiles:{},gallery:[]});localSave('전체 초기화됨');if(firebaseReady)await syncSection('full');currentView='welcome';render();}});
+}
+
+function saveInterest(e) {
+  e.preventDefault(); const p=profile(), selectedActivities=collect('activities'), custom=text('customActivity'), top=collect('topInterests');
+  if(selectedActivities.length+(custom?1:0)<3) return toast('좋아하는 활동을 3개 이상 골라 주세요.');
+  if(top.length!==3) return toast('대표 흥미 보물을 정확히 3개 골라 주세요.');
+  Object.assign(p.interest,{selected:selectedActivities,custom,fastTime:text('fastTime'),keepTrying:text('keepTrying'),schoolFun:text('schoolFun'),newLearn:text('newLearn'),mode:collect('mode')[0]||'',reasons:collect('reasons'),otherReason:text('otherReason'),top});
+  p.completed.interest=true; saveStore('흥미 저장됨','interest'); toast('흥미 보물 3개를 저장했어요!'); setView('dashboard');
+}
+
+function saveFriendCard(e) {
+  e.preventDefault();
+  const p=profile(), friend=selected('friendName'), strengths=collect('friendStrengths'), reason=text('friendReason');
+  if(!friend)return toast('강점 카드를 작성한 친구의 이름을 골라 주세요.');
+  if(strengths.length<3||strengths.length>5)return toast('강점을 3개에서 5개 사이로 골라 주세요.');
+  const card={friend,strengths,reason,createdAt:new Date().toISOString()};
+  const existingIndex=p.strength.cards.findIndex(c=>c.friend===friend);
+  if(existingIndex>=0)p.strength.cards[existingIndex]=card; else p.strength.cards.push(card);
+  p.strength.top=[];
+  p.completed.strength=false;
+  saveStore('강점 카드 저장됨','friendCard',{friend,card}); toast(existingIndex>=0?'강점 카드를 새 내용으로 바꿨어요!':'강점 카드를 보냈어요!'); renderStrength();
+}
+function saveStrengthResult(e) {
+  e.preventDefault(); const p=profile(), top=collect('topStrengths');
+  if(p.strength.cards.length===0)return toast('친구 강점 카드를 먼저 받아 주세요.');
+  if(top.length!==3)return toast('대표 강점을 정확히 3개 골라 주세요.');
+  Object.assign(p.strength,{own:collect('ownStrengths'),top,discovery:text('discovery'),useAt:text('useAt'),grow:text('grow')}); p.completed.strength=true; saveStore('강점 저장됨','strength'); toast('강점 보석을 저장했어요!'); setView('ai');
+}
+function runAI(e) {
+  e.preventDefault(); const p=profile(), values=collect('values'); if(values.length<1||values.length>3)return toast('중요하게 생각하는 것을 1~3개 골라 주세요.');
+  p.ai.values=values;p.ai.extra=text('aiExtra');
+  const btn=e.submitter; if(btn){btn.disabled=true;btn.textContent='직업을 찾고 있어요…';}
+  setTimeout(()=>{p.ai.recommendations=generateRecommendations(p);p.completed.ai=false;saveStore('추천 생성됨','ai');toast('직업 추천이 완성되었어요!');renderAI();window.scrollTo({top:document.getElementById('aiResults')?.offsetTop||0,behavior:'smooth'});},650);
+}
+function saveAIReflection(e) {
+  e.preventDefault(); const p=profile(); const favorite=selected('favorite'); if(!favorite)return toast('가장 관심 있는 직업을 골라 주세요.');
+  Object.assign(p.ai,{expected:text('expected'),newJob:text('newJob'),favorite,favoriteWhy:text('favoriteWhy'),agree:selected('agree'),mismatch:text('mismatch'),chosenActivity:text('chosenActivity')}); p.completed.ai=true; saveStore('AI 탐험 저장됨','ai');toast('직업 탐험 결과를 저장했어요!');setView('future');
+}
+function showFutureHint() {
+  const topic=collect('futureTopic')[0]; if(!topic||!futureHints[topic])return toast('먼저 미래 주제를 하나 골라 주세요.');
+  const hint=futureHints[topic];document.getElementById('futureHintBox').innerHTML=renderFutureHint(hint);document.querySelectorAll('.hint-name').forEach(el=>el.addEventListener('click',()=>{document.getElementById('futureName').value=el.dataset.hintName;}));
+  if(!document.getElementById('futureEmoji').value)document.getElementById('futureEmoji').value=hint.emoji; toast('아이디어 씨앗을 준비했어요.');
+}
+function saveFuture(e) {
+  e.preventDefault(); const p=profile(), topic=collect('futureTopic')[0]||'', customTopic=text('customTopic'); if(!topic&&!customTopic)return toast('미래 주제를 골라 주세요.');
+  const name=text('futureName'); if(!name)return toast('미래 직업 이름을 지어 주세요.');
+  const tasks=[text('futureTask0'),text('futureTask1'),text('futureTask2')]; if(tasks.filter(Boolean).length<2)return toast('주요 업무를 2가지 이상 적어 주세요.');
+  Object.assign(p.future,{topic,customTopic,change:text('futureChange'),problem:text('futureProblem'),target:collect('futureTarget')[0]||'',help:text('futureHelp'),name,tasks,tools:collect('futureTools'),strengths:collect('futureStrengths'),place:collect('workPlace')[0]||'',benefit:text('futureBenefit'),emoji:selected('futureEmoji'),intro:text('futureIntro'),published:document.getElementById('publishFuture').checked});
+  p.completed.future=true;
+  store.gallery=store.gallery.filter(x=>x.profileId!==p.id);
+  if(p.future.published) store.gallery.push({profileId:p.id,nickname:p.nickname,name:p.future.name,emoji:p.future.emoji,problem:p.future.problem,strengths:p.future.strengths,reactions:0});
+  saveStore('미래 직업 저장됨','future');toast('미래 직업 카드를 저장했어요!');setView('report');
+}
+function saveFinalThoughts(e) {
+  e.preventDefault(); const p=profile();p.finalThoughts={like:text('finalLike'),strength:text('finalStrength'),job:text('finalJob'),reason:text('finalReason'),next:text('finalNext')};p.completed.report=true;saveStore('보고서 저장됨','report');toast('꿈끼 탐험 보고서가 완성되었어요!');renderReport();
+}
+function downloadJSON(data,filename) {
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);
+}
+
+function openTeacherModal() {
+  document.getElementById('modalRoot').innerHTML=`<div class="modal-backdrop" id="teacherModal"><div class="modal"><h2>교사용 화면 열기</h2><p class="page-subtitle">체험판 비밀번호를 입력하세요.</p><form id="teacherLogin" class="stack" style="margin-top:1rem"><div class="field"><label for="teacherCode">비밀번호</label><input id="teacherCode" type="password" inputmode="numeric" required></div><div class="button-row end"><button id="closeModal" class="ghost-button" type="button">취소</button><button class="primary-button" type="submit">열기</button></div></form></div></div>`;
+  document.getElementById('closeModal').addEventListener('click',()=>document.getElementById('modalRoot').innerHTML='');
+  document.getElementById('teacherLogin').addEventListener('submit',e=>{e.preventDefault();if(text('teacherCode')!==TEACHER_CODE)return toast('비밀번호가 맞지 않아요.');document.getElementById('modalRoot').innerHTML='';setView('teacher');});
+}
+
+document.getElementById('homeBtn').addEventListener('click',()=>setView(profile()?'dashboard':'welcome'));
+document.getElementById('teacherBtn').addEventListener('click',openTeacherModal);
+render();
+initializeFirebaseSync();
+
+</script>
+</body>
+</html>
