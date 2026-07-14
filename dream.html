@@ -597,24 +597,30 @@ function renderStrength() {
 
 function renderStrengthResult() {
   const p=profile(), d=p.strength;
-  app.innerHTML = `${stepHeader(2,'나의 대표 강점 정하기','친구들이 발견한 강점을 살펴보고 나를 잘 보여 주는 강점 3개를 골라요.')}
-  <div class="notice info">친구 강점 카드를 더 받거나 고치려면 아래의 ‘친구 강점 카드 화면’ 버튼을 누르세요.</div>
+  const friendStrengths=[...new Set(d.cards.flatMap(c=>c.strengths))];
+  app.innerHTML = `${stepHeader(2,'나의 대표 강점 정하기','친구가 찾아준 강점과 내가 생각한 강점을 살펴보고 나를 잘 보여 주는 강점 3개를 골라요.')}
+  <div class="notice info">친구 강점 카드가 없어도 내가 생각한 강점만으로 계속할 수 있어요. 이 경우 활동 3으로 넘어가기 전에 확인 메시지가 나타납니다.</div>
   <form id="strengthResultForm" class="panel stack" style="margin-top:1rem"><h2>${escapeHTML(p.nickname)}의 강점 보석</h2>
-    <section class="section-card"><h3 style="margin-top:0">친구들이 찾아준 강점</h3>${d.cards.length?`<div class="tag-list">${[...new Set(d.cards.flatMap(c=>c.strengths))].map(v=>`<span class="tag green">${escapeHTML(v)}</span>`).join('')}</div>`:'<div class="empty">아직 도착한 강점 카드가 없어요. 먼저 친구 강점 카드를 받아 보세요.</div>'}</section>
-    <fieldset class="field"><legend>내가 생각한 나의 강점</legend><div class="choice-grid">${Object.values(strengthGroups).flat().map(v=>checkbox('ownStrengths',v,d.own.includes(v))).join('')}</div></fieldset>
-    <fieldset class="field"><legend>친구가 찾아준 강점 중 대표 강점 3개</legend><div id="topStrengthChoices" class="choice-grid"></div><div id="noStrengthNotice" class="notice info">먼저 친구 강점 카드를 받아 보세요.</div></fieldset>
+    <section class="section-card"><h3 style="margin-top:0">친구들이 찾아준 강점</h3>${d.cards.length?`<div class="tag-list">${friendStrengths.map(v=>`<span class="tag green">${escapeHTML(v)}</span>`).join('')}</div>`:'<div class="empty">아직 도착한 강점 카드가 없어요. 아래에서 내가 생각한 강점을 선택해 활동을 계속할 수 있어요.</div>'}</section>
+    <fieldset class="field"><legend>내가 생각한 나의 강점</legend><p class="helper">친구 강점 카드가 없다면 여기에서 3개 이상 고른 뒤 대표 강점 3개를 정하세요.</p><div class="choice-grid">${Object.values(strengthGroups).flat().map(v=>checkbox('ownStrengths',v,d.own.includes(v))).join('')}</div></fieldset>
+    <fieldset class="field"><legend>${d.cards.length?'친구가 찾아준 강점 중 대표 강점 3개':'내가 생각한 강점 중 대표 강점 3개'}</legend><div id="topStrengthChoices" class="choice-grid"></div><div id="noStrengthNotice" class="notice info">${d.cards.length?'먼저 친구 강점 카드를 받아 보세요.':'위에서 내가 생각한 강점을 선택하면 여기에 대표 강점 선택지가 나타납니다.'}</div></fieldset>
     <div class="grid-2"><div class="field"><label for="discovery">새롭게 알게 된 나의 강점</label><textarea id="discovery">${escapeHTML(d.discovery)}</textarea></div><div class="field"><label for="useAt">이 강점을 사용해 보고 싶은 활동</label><textarea id="useAt">${escapeHTML(d.useAt)}</textarea></div></div>
     <div class="field"><label for="grow">앞으로 더 키우고 싶은 강점</label><input id="grow" type="text" value="${escapeHTML(d.grow)}"></div>
     <div class="button-row end"><button type="button" class="ghost-button" data-view="strength">친구 강점 카드 화면</button><button type="submit" class="primary-button">강점 저장하고 맞춤 추천받기</button></div>
   </form>`;
-  updateTopStrengthChoices();
+  updateTopStrengthChoices(d.top);
+  document.querySelectorAll('input[name="ownStrengths"]').forEach(el=>el.addEventListener('change',()=>updateTopStrengthChoices(collect('topStrengths'))));
 }
 
-function updateTopStrengthChoices() {
-  const p=profile(), options=[...new Set(p.strength.cards.flatMap(c=>c.strengths))];
+function updateTopStrengthChoices(previous=[]) {
+  const p=profile();
+  const friendOptions=[...new Set(p.strength.cards.flatMap(c=>c.strengths))];
+  const ownOptions=collect('ownStrengths');
+  const options=friendOptions.length?friendOptions:ownOptions;
   const wrap=document.getElementById('topStrengthChoices'); if(!wrap)return;
-  wrap.innerHTML=options.map(v=>checkbox('topStrengths',v,p.strength.top.includes(v))).join('');
-  document.getElementById('noStrengthNotice').style.display=options.length?'none':'block';
+  wrap.innerHTML=options.map(v=>checkbox('topStrengths',v,previous.includes(v))).join('');
+  const notice=document.getElementById('noStrengthNotice');
+  if(notice) notice.style.display=options.length?'none':'block';
 }
 
 const CAREER_SYNONYM_GROUPS = [
@@ -904,10 +910,19 @@ function saveFriendCard(e) {
   saveStore('강점 카드 저장됨','friendCard',{friend,card}); toast(existingIndex>=0?'강점 카드를 새 내용으로 바꿨어요!':'강점 카드를 보냈어요!'); renderStrength();
 }
 function saveStrengthResult(e) {
-  e.preventDefault(); const p=profile(), top=collect('topStrengths');
-  if(p.strength.cards.length===0)return toast('친구 강점 카드를 먼저 받아 주세요.');
+  e.preventDefault();
+  const p=profile(), own=collect('ownStrengths'), top=collect('topStrengths');
+  if(p.strength.cards.length===0 && own.length<3)return toast('내가 생각한 강점을 3개 이상 골라 주세요.');
   if(top.length!==3)return toast('대표 강점을 정확히 3개 골라 주세요.');
-  Object.assign(p.strength,{own:collect('ownStrengths'),top,discovery:text('discovery'),useAt:text('useAt'),grow:text('grow')}); p.completed.strength=true; saveStore('강점 저장됨','strength'); toast('강점 보석을 저장했어요!'); setView('ai');
+  if(p.strength.cards.length===0) {
+    const proceed=window.confirm('아직 친구가 찾아준 강점 카드가 없습니다. 내가 선택한 강점만으로 활동 3의 맞춤 직업 추천으로 넘어갈까요?');
+    if(!proceed)return;
+  }
+  Object.assign(p.strength,{own,top,discovery:text('discovery'),useAt:text('useAt'),grow:text('grow')});
+  p.completed.strength=true;
+  saveStore('강점 저장됨','strength');
+  toast('강점 보석을 저장했어요!');
+  setView('ai');
 }
 function runAI(e) {
   e.preventDefault(); const p=profile(), values=collect('values'); if(values.length<1||values.length>3)return toast('중요하게 생각하는 것을 1~3개 골라 주세요.');
