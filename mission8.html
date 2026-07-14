@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>미션 8. 재활용품을 활용해 만들기</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EFF5E1;             /* 연둣빛 새싹 배경 */
+    --main:#6F9D2F;           /* 재활용 연두 */
+    --main-dark:#4F7420;
+    --paper:#FFFEF8;
+    --line:#DCE8C6;
+    --ink:#2B2B2B;
+    --title-red:#E8493A;
+    --navy:#1B4B8F;
+    --pending:#F59E0B;
+    --hold:#E8493A;
+    --pass:#2E9E5B;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    font-family:'Gowun Dodum',sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    min-height:100vh;
+  }
+  .wrap{max-width:560px;margin:0 auto;padding:20px 14px 60px;}
+
+  /* ── 헤더 ── */
+  .hero{text-align:center;padding:18px 0 6px;}
+  .hero .mission-no{
+    display:inline-block;background:var(--main);color:#fff;
+    font-family:'Jua',sans-serif;font-size:13px;
+    padding:5px 14px;border-radius:999px;margin-bottom:10px;
+  }
+  .hero h1{
+    font-family:'Jua',sans-serif;
+    font-size:clamp(24px,6.5vw,32px);
+    color:var(--main-dark);
+    line-height:1.35;
+    word-break:keep-all;
+  }
+  .hero .back-link{margin-top:10px;}
+  .hero .back-link a{font-size:13px;color:var(--navy);}
+
+  /* ── 카드 공통 ── */
+  .card{
+    background:var(--paper);
+    border-radius:18px;
+    padding:20px 18px;
+    margin-top:16px;
+    box-shadow:0 4px 14px rgba(79,116,32,.12);
+  }
+  .card h2{
+    font-family:'Jua',sans-serif;color:var(--main-dark);
+    font-size:17px;margin-bottom:12px;
+  }
+
+  /* ── 과제 설명 ── */
+  .howto{list-style:none;}
+  .howto li{
+    position:relative;padding:8px 0 8px 34px;
+    font-size:14px;line-height:1.65;word-break:keep-all;
+    border-bottom:1px dashed var(--line);
+  }
+  .howto li:last-child{border-bottom:none;}
+  .howto li .step{
+    position:absolute;left:0;top:9px;
+    width:24px;height:24px;border-radius:50%;
+    background:var(--main);color:#fff;
+    font-family:'Jua',sans-serif;font-size:13px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .tip{
+    margin-top:12px;background:#F1F7E6;border-radius:12px;
+    padding:11px 14px;font-size:12.5px;line-height:1.6;color:#557A2A;
+    word-break:keep-all;
+  }
+
+  /* ── 로그인 ── */
+  .login-box{text-align:center;}
+  .login-box input{
+    width:100%;font-family:inherit;font-size:17px;
+    padding:12px 16px;border:2px solid var(--line);border-radius:12px;
+    outline:none;text-align:center;
+  }
+  .login-box input:focus{border-color:var(--main);}
+  .btn{
+    font-family:'Jua',sans-serif;font-size:16px;
+    border:none;border-radius:12px;padding:13px 20px;
+    cursor:pointer;transition:transform .1s;
+  }
+  .btn:active{transform:scale(.97);}
+  .btn-main{background:var(--main);color:#fff;}
+  .btn-green{background:var(--pass);color:#fff;}
+  .btn-red{background:var(--title-red);color:#fff;}
+  .btn-navy{background:var(--navy);color:#fff;}
+  .btn-ghost{background:none;color:var(--navy);font-size:13px;text-decoration:underline;padding:8px;}
+  .btn-block{width:100%;margin-top:12px;}
+  .btn:disabled{opacity:.55;cursor:default;}
+
+  /* ── 상단바 ── */
+  .topbar{
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--paper);border-radius:14px;
+    padding:10px 16px;margin-top:16px;
+    box-shadow:0 3px 10px rgba(79,116,32,.1);
+  }
+  .topbar .who{font-family:'Jua',sans-serif;color:var(--main-dark);font-size:16px;}
+  .mini-btn{
+    font-family:inherit;font-size:12.5px;
+    border:1.5px solid var(--line);background:#F5F9EC;
+    border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--main-dark);
+  }
+
+  /* ── 상태 배너 ── */
+  .status-banner{
+    margin-top:14px;border-radius:14px;padding:13px 16px;
+    font-size:14px;line-height:1.6;word-break:keep-all;
+  }
+  .status-banner.none{background:#F1F7E6;color:#4F7420;}
+  .status-banner.pending{background:#FFF4DE;color:#9A6B0B;}
+  .status-banner.hold{background:#FDEBEA;color:#B33227;}
+  .status-banner.passed{background:#E9F7EF;color:#1F7A43;}
+
+  /* ── 보고서 폼 ── */
+  .field{margin-bottom:14px;}
+  .field label{
+    display:block;font-family:'Jua',sans-serif;
+    font-size:14px;color:var(--main-dark);margin-bottom:6px;
+  }
+  .field input[type=text], .field textarea{
+    width:100%;font-family:inherit;font-size:15px;
+    padding:11px 13px;border:2px solid var(--line);border-radius:12px;
+    outline:none;background:#fff;
+  }
+  .field input:focus, .field textarea:focus{border-color:var(--main);}
+  .field textarea{
+    min-height:170px;resize:vertical;line-height:1.8;
+    background-image:repeating-linear-gradient(transparent,transparent 26px,#EDF4DE 26px,#EDF4DE 27px);
+    background-attachment:local;
+  }
+  .char-count{text-align:right;font-size:11.5px;color:#93A96F;margin-top:3px;}
+
+  /* ── 사진 업로드 ── */
+  .photo-area{margin-bottom:6px;}
+  .photo-grid{
+    display:grid;grid-template-columns:repeat(3,1fr);
+    gap:8px;margin-top:8px;
+  }
+  .photo-thumb{
+    position:relative;border-radius:12px;overflow:hidden;
+    aspect-ratio:1;background:#EDF4DE;border:2px solid var(--line);
+  }
+  .photo-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  .photo-thumb .del{
+    position:absolute;top:4px;right:4px;
+    width:24px;height:24px;border-radius:50%;
+    background:rgba(0,0,0,.55);color:#fff;border:none;
+    font-size:13px;cursor:pointer;line-height:1;
+  }
+  .photo-add{
+    aspect-ratio:1;border-radius:12px;
+    border:2px dashed var(--main);background:#F5F9EC;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    cursor:pointer;color:var(--main-dark);
+    font-size:12px;gap:4px;font-family:'Jua',sans-serif;
+  }
+  .photo-add span:first-child{font-size:24px;}
+  .photo-note{font-size:11.5px;color:#93A96F;margin-top:6px;line-height:1.5;}
+
+  /* ── 교사 화면 ── */
+  .post-item{
+    border:1.5px solid var(--line);border-radius:14px;
+    padding:14px;margin-bottom:12px;background:#fff;
+  }
+  .post-item .p-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .post-item .p-name{font-family:'Jua',sans-serif;color:var(--main-dark);font-size:15px;}
+  .p-badge{
+    font-family:'Jua',sans-serif;font-size:11px;color:#fff;
+    padding:3px 10px;border-radius:999px;
+  }
+  .p-badge.pending{background:var(--pending);}
+  .p-badge.hold{background:var(--hold);}
+  .p-badge.passed{background:var(--pass);}
+  .post-item .p-meta{font-size:12px;color:#93A96F;margin-bottom:8px;}
+  .post-item .p-text{
+    font-size:13.5px;line-height:1.7;white-space:pre-wrap;word-break:break-word;
+    background:#F5F9EC;border-radius:10px;padding:10px 12px;margin-bottom:10px;
+  }
+  .post-item .p-photos{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+  .post-item .p-photos img{
+    width:88px;height:88px;object-fit:cover;border-radius:10px;
+    border:1.5px solid var(--line);cursor:pointer;
+  }
+  .post-item .p-btns{display:flex;gap:8px;}
+  .post-item .p-btns .btn{flex:1;font-size:14px;padding:9px 14px;}
+  .empty-msg{font-size:14px;color:#93A96F;text-align:center;padding:16px 0;}
+
+  /* ── 사진 크게 보기 ── */
+  .lightbox{
+    position:fixed;inset:0;background:rgba(0,0,0,.8);
+    display:flex;align-items:center;justify-content:center;
+    z-index:100;cursor:pointer;padding:16px;
+  }
+  .lightbox img{max-width:100%;max-height:90vh;border-radius:12px;}
+
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:var(--main-dark);color:#fff;padding:11px 22px;border-radius:999px;
+    font-size:14px;z-index:200;box-shadow:0 4px 14px rgba(0,0,0,.25);
+    animation:pop .2s;
+  }
+  @keyframes pop{from{opacity:0;transform:translateX(-50%) translateY(8px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+  .loading{text-align:center;padding:40px 0;font-family:'Jua',sans-serif;color:var(--main-dark);}
+  .setup-code{
+    background:#2C3A1E;color:#DFEBC9;border-radius:12px;
+    padding:14px;font-family:monospace;font-size:12px;
+    line-height:1.7;overflow-x:auto;margin:10px 0;white-space:pre;
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="mission-no">♻️ 미션 8</div>
+    <h1>재활용품을 활용해<br>만들기 하기</h1>
+    <div class="back-link"><a href="index.html">← 미션 빙고판으로 돌아가기</a></div>
+  </div>
+  <div id="app"><div class="loading">불러오는 중...</div></div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════
+   ★ 설정 구역 — 선생님이 이 부분만 수정하면 됩니다 ★
+   ═══════════════════════════════════════════════════════
+   빙고판(index.html)에 붙여 넣은 것과 똑같은
+   firebaseConfig 값을 아래에 붙여 넣으세요.
+*/
+const firebaseConfig = {
+  apiKey: "AIzaSyCBgz3oLm_dgKBFwGglidasKoENI5PNs7I",
+  authDomain: "summer-vacation-mission.firebaseapp.com",
+  databaseURL: "https://summer-vacation-mission-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "summer-vacation-mission",
+  storageBucket: "summer-vacation-mission.firebasestorage.app",
+  messagingSenderId: "171875205794",
+  appId: "1:171875205794:web:a5cca666fedc22c2b5cdfb",
+  measurementId: "G-H9QZ9NXR39"
+};
+const TEACHER_PIN = "2026";      // 선생님 비밀번호 (빙고판과 동일하게)
+const MISSION_INDEX = 7;         // 이 과제의 빙고판 번호 (미션8 = 7)
+const MISSION_ID = "mission8";   // 저장소에서 이 과제방을 구분하는 이름
+const MAX_PHOTOS = 4;            // 업로드 가능한 사진 수
+/* ═══════════════════════════════════════════════════════ */
+
+const app = document.getElementById("app");
+let db = null;
+let currentName = null;
+let photos = [];
+
+function toast(msg){
+  const t = document.createElement("div");
+  t.className = "toast"; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2400);
+}
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function remember(name){ try{ localStorage.setItem("bingo-name", name); }catch(e){} }
+function recall(){ try{ return localStorage.getItem("bingo-name") || ""; }catch(e){ return ""; } }
+
+/* ─────────── 시작: Firebase 연결 확인 ─────────── */
+function init(){
+  if(firebaseConfig.apiKey === "여기에_붙여넣기"){
+    renderSetupGuide();
+    return;
+  }
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+  }catch(e){
+    app.innerHTML = `<div class="card"><h2>⚠️ 연결 오류</h2>
+      <p style="font-size:14px;line-height:1.7;">Firebase 설정값이 올바른지 확인해 주세요.<br>오류: ${esc(e.message)}</p></div>`;
+    return;
+  }
+  const params = new URLSearchParams(location.search);
+  const nameFromUrl = (params.get("name") || "").trim().replace(/\s+/g,"");
+  const saved = recall();
+  if(nameFromUrl){ remember(nameFromUrl); enterStudent(nameFromUrl); }
+  else if(saved){ enterStudent(saved); }
+  else { renderLogin(); }
+}
+
+function renderSetupGuide(){
+  app.innerHTML = `
+    <div class="card">
+      <h2>🔧 선생님, 먼저 설정이 필요해요</h2>
+      <p style="font-size:14px;line-height:1.8;word-break:keep-all;">
+        이 파일을 열어 위쪽의 <b>firebaseConfig</b> 부분에
+        빙고판과 똑같은 Firebase 설정값을 붙여 넣어 주세요.
+      </p>
+      <div class="setup-code">const firebaseConfig = {
+  apiKey: "AIza...",
+  authDomain: "프로젝트명.firebaseapp.com",
+  projectId: "프로젝트명",
+  ...
+};</div>
+    </div>`;
+}
+
+/* ─────────── 과제 설명 카드 ─────────── */
+function guideCard(){
+  return `
+    <div class="card">
+      <h2>♻️ 이렇게 해 보세요</h2>
+      <ul class="howto">
+        <li><span class="step">1</span>집에서 버려지는 <b>재활용품을 모아요</b>. (예: 우유갑, 페트병, 휴지심, 종이상자, 병뚜껑)</li>
+        <li><span class="step">2</span>모은 재료로 <b>무엇을 만들지 계획</b>해요. 쓸모 있는 물건도 좋고, 멋진 작품도 좋아요!</li>
+        <li><span class="step">3</span>가위나 칼을 쓸 때는 <b>어른과 함께</b> 안전하게 만들어요.</li>
+        <li><span class="step">4</span>만드는 <b>과정과 완성된 작품</b>을 사진으로 찍고, 아래 보고서에 정리해서 제출해요.</li>
+      </ul>
+      <div class="tip">💡 아이디어가 필요하다면: 우유갑 연필꽂이, 페트병 화분, 휴지심 동물 인형, 상자 자동차, 병뚜껑 자석... 버려질 물건이 새 물건으로 태어나는 게 바로 재활용의 마법이에요!</div>
+    </div>`;
+}
+
+/* ─────────── 로그인 ─────────── */
+function renderLogin(){
+  currentName = null;
+  app.innerHTML = guideCard() + `
+    <div class="card login-box">
+      <h2>이름을 입력하고 만들기를 시작해요!</h2>
+      <input id="nameInput" type="text" placeholder="예) 김하늘" maxlength="10" autocomplete="off">
+      <button class="btn btn-main btn-block" id="startBtn">만들기 하러 가기 ♻️</button>
+      <button class="btn btn-ghost" id="teacherBtn" style="margin-top:10px;">선생님 화면</button>
+    </div>`;
+  const input = document.getElementById("nameInput");
+  const go = () => {
+    const name = input.value.trim().replace(/\s+/g,"");
+    if(name.length < 2){ toast("이름을 정확히 입력해 주세요!"); return; }
+    remember(name);
+    enterStudent(name);
+  };
+  document.getElementById("startBtn").onclick = go;
+  input.addEventListener("keydown", e => { if(e.key==="Enter") go(); });
+  document.getElementById("teacherBtn").onclick = renderTeacherLogin;
+}
+
+/* ─────────── Firestore 도우미 ─────────── */
+function postRef(name){ return db.collection("missions").doc(MISSION_ID).collection("posts").doc(name); }
+function studentRef(name){ return db.collection("students").doc(name); }
+
+async function getPost(name){
+  const snap = await postRef(name).get();
+  return snap.exists ? snap.data() : null;
+}
+async function getPhotos(name){
+  const snap = await postRef(name).collection("photos").orderBy("order").get();
+  return snap.docs.map(d => d.data().data);
+}
+async function setStudentStatus(name, status){
+  const ref = studentRef(name);
+  const snap = await ref.get();
+  let statuses = Array(9).fill("none");
+  let extra = {};
+  if(snap.exists){
+    const d = snap.data();
+    if(Array.isArray(d.statuses)) statuses = d.statuses.slice();
+    while(statuses.length < 9) statuses.push("none");
+    if(d.reflection) extra.reflection = d.reflection;
+  }
+  statuses[MISSION_INDEX] = status;
+  await ref.set({ statuses, updatedAt: Date.now(), ...extra }, { merge: true });
+}
+
+/* ─────────── 학생 화면 ─────────── */
+async function enterStudent(name){
+  currentName = name;
+  app.innerHTML = `<div class="loading">만들기 보고서를 불러오는 중...</div>`;
+  let post = null;
+  try{ post = await getPost(name); }
+  catch(e){
+    app.innerHTML = `<div class="card"><h2>⚠️ 불러오기 실패</h2>
+      <p style="font-size:14px;line-height:1.7;word-break:keep-all;">인터넷 연결과 Firebase 설정을 확인해 주세요.<br>(${esc(e.message)})</p></div>`;
+    return;
+  }
+  photos = [];
+  if(post && post.status !== "passed"){
+    try{ photos = (await getPhotos(name)).map(data => ({data})); }catch(e){}
+  }
+  renderStudent(post);
+}
+
+function renderStudent(post){
+  const st = post ? post.status : null;
+  let banner = "";
+  if(!post){
+    banner = `<div class="status-banner none">♻️ 아직 제출 전이에요. 재활용품 작품을 만들고 제출해 주세요!</div>`;
+  } else if(st === "pending"){
+    banner = `<div class="status-banner pending">📮 제출 완료! 선생님이 확인하고 있어요. 내용을 고쳐서 다시 제출할 수도 있어요.</div>`;
+  } else if(st === "hold"){
+    banner = `<div class="status-banner hold">😢 <b>보류</b>되었어요. 아래 내용을 보완해서 다시 제출해 주세요!` +
+      (post.feedback ? `<br>👩‍🏫 선생님 말씀: ${esc(post.feedback)}` : "") + `</div>`;
+  } else if(st === "passed"){
+    banner = `<div class="status-banner passed">🎉 <b>통과!</b> 재활용품 만들기 미션 성공! 빙고판에 도장이 찍혔어요.</div>`;
+  }
+
+  const editable = st !== "passed";
+
+  const formHtml = editable ? `
+    <div class="card">
+      <h2>🛠️ 나의 만들기 보고서</h2>
+      <div class="field">
+        <label>무엇을 만들었나요?</label>
+        <input type="text" id="subjectInput" maxlength="30" placeholder="예) 우유갑 연필꽂이, 페트병 화분"
+          value="${post ? esc(post.subject||"") : ""}">
+      </div>
+      <div class="field">
+        <label>어떤 재활용품을 사용했나요?</label>
+        <input type="text" id="placeInput" maxlength="30" placeholder="예) 우유갑 2개, 페트병, 병뚜껑 4개"
+          value="${post ? esc(post.place||"") : ""}">
+      </div>
+      <div class="field">
+        <label>만든 과정과 느낀 점을 써 보세요</label>
+        <textarea id="textInput" maxlength="1500" placeholder="어떤 순서로 만들었는지, 어려웠던 점, 완성하고 나서 느낀 점, 이 작품을 어떻게 쓸 건지 자유롭게 써 보세요.">${post ? esc(post.text||"") : ""}</textarea>
+        <div class="char-count"><span id="charNow">${post && post.text ? post.text.length : 0}</span> / 1500자</div>
+      </div>
+      <div class="field photo-area">
+        <label>작품 사진 올리기 (최대 ${MAX_PHOTOS}장)</label>
+        <div class="photo-grid" id="photoGrid"></div>
+        <div class="photo-note">📷 만드는 과정과 완성된 작품 사진을 올려 보세요. 사진은 자동으로 작게 줄여서 올라가요.</div>
+        <input type="file" id="photoInput" accept="image/*" multiple style="display:none;">
+      </div>
+      <button class="btn btn-red btn-block" id="submitBtn">${st==="hold" ? "다시 제출하기 💪" : (st==="pending" ? "수정해서 다시 제출하기 ✏️" : "만들기 보고서 제출하기 📮")}</button>
+    </div>` : `
+    <div class="card">
+      <h2>🛠️ 제출한 만들기 보고서</h2>
+      <div class="field"><label>만든 작품</label><div style="font-size:15px;">${esc(post.subject||"-")}</div></div>
+      <div class="field"><label>사용한 재료</label><div style="font-size:15px;">${esc(post.place||"-")}</div></div>
+      <div class="field"><label>보고서 내용</label>
+        <div style="font-size:14px;line-height:1.8;white-space:pre-wrap;word-break:break-word;background:#F5F9EC;border-radius:10px;padding:12px;">${esc(post.text||"")}</div>
+      </div>
+      <div class="photo-grid" id="passedPhotos"></div>
+    </div>`;
+
+  app.innerHTML = `
+    <div class="topbar">
+      <span class="who">🙋 ${esc(currentName)}</span>
+      <div>
+        <button class="mini-btn" id="refreshBtn">🔄 새로고침</button>
+        <button class="mini-btn" id="logoutBtn">이름 바꾸기</button>
+      </div>
+    </div>
+    ${banner}
+    ${guideCard()}
+    ${formHtml}`;
+
+  document.getElementById("refreshBtn").onclick = () => enterStudent(currentName);
+  document.getElementById("logoutBtn").onclick = () => { try{localStorage.removeItem("bingo-name");}catch(e){} renderLogin(); };
+
+  if(editable){
+    const ta = document.getElementById("textInput");
+    ta.addEventListener("input", ()=>{ document.getElementById("charNow").textContent = ta.value.length; });
+    renderPhotoGrid();
+    document.getElementById("photoInput").addEventListener("change", handlePhotoSelect);
+    document.getElementById("submitBtn").onclick = submitPost;
+  } else if(post){
+    getPhotos(currentName).then(list=>{
+      const grid = document.getElementById("passedPhotos");
+      if(grid) grid.innerHTML = list.map(d=>`<div class="photo-thumb"><img src="${d}" alt="작품 사진"></div>`).join("");
+      grid.querySelectorAll("img").forEach(img=>{ img.onclick = ()=>openLightbox(img.src); });
+    }).catch(()=>{});
+  }
+}
+
+/* ─────────── 사진 처리 ─────────── */
+function renderPhotoGrid(){
+  const grid = document.getElementById("photoGrid");
+  if(!grid) return;
+  let html = photos.map((p,idx)=>`
+    <div class="photo-thumb">
+      <img src="${p.data}" alt="사진 ${idx+1}">
+      <button class="del" data-del="${idx}" aria-label="사진 삭제">✕</button>
+    </div>`).join("");
+  if(photos.length < MAX_PHOTOS){
+    html += `<div class="photo-add" id="addPhoto" role="button" tabindex="0"><span>📷</span><span>사진 추가</span></div>`;
+  }
+  grid.innerHTML = html;
+  const add = document.getElementById("addPhoto");
+  if(add){
+    const open = ()=>document.getElementById("photoInput").click();
+    add.onclick = open;
+    add.onkeydown = e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();open();} };
+  }
+  grid.querySelectorAll("[data-del]").forEach(btn=>{
+    btn.onclick = ()=>{ photos.splice(parseInt(btn.dataset.del),1); renderPhotoGrid(); };
+  });
+  grid.querySelectorAll(".photo-thumb img").forEach(img=>{
+    img.onclick = ()=>openLightbox(img.src);
+  });
+}
+
+async function handlePhotoSelect(e){
+  const files = Array.from(e.target.files || []);
+  e.target.value = "";
+  for(const file of files){
+    if(photos.length >= MAX_PHOTOS){ toast(`사진은 최대 ${MAX_PHOTOS}장까지예요!`); break; }
+    if(!file.type.startsWith("image/")){ continue; }
+    try{
+      const data = await compressImage(file);
+      photos.push({ data });
+      renderPhotoGrid();
+    }catch(err){
+      toast("사진을 불러오지 못했어요. 다른 사진으로 시도해 보세요.");
+    }
+  }
+}
+
+function compressImage(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onerror = ()=>reject(new Error("read fail"));
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onerror = ()=>reject(new Error("img fail"));
+      img.onload = ()=>{
+        const MAX = 1000;
+        let w = img.width, h = img.height;
+        if(w > MAX || h > MAX){
+          const r = Math.min(MAX/w, MAX/h);
+          w = Math.round(w*r); h = Math.round(h*r);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        let q = 0.75;
+        let out = canvas.toDataURL("image/jpeg", q);
+        while(out.length > 700000 && q > 0.3){
+          q -= 0.1;
+          out = canvas.toDataURL("image/jpeg", q);
+        }
+        if(out.length > 900000) reject(new Error("too big"));
+        else resolve(out);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function openLightbox(src){
+  const lb = document.createElement("div");
+  lb.className = "lightbox";
+  lb.innerHTML = `<img src="${src}" alt="사진 크게 보기">`;
+  lb.onclick = ()=>lb.remove();
+  document.body.appendChild(lb);
+}
+
+/* ─────────── 제출 ─────────── */
+async function submitPost(){
+  const subject = document.getElementById("subjectInput").value.trim();
+  const place = document.getElementById("placeInput").value.trim();
+  const text = document.getElementById("textInput").value.trim();
+  if(!subject){ toast("무엇을 만들었는지 써 주세요!"); return; }
+  if(text.length < 20){ toast("보고서 내용을 20자 이상 써 주세요!"); return; }
+  if(photos.length === 0){ toast("작품 사진을 1장 이상 올려 주세요!"); return; }
+
+  const btn = document.getElementById("submitBtn");
+  btn.disabled = true; btn.textContent = "제출하는 중...";
+
+  try{
+    await postRef(currentName).set({
+      name: currentName,
+      subject, place, text,
+      subjectLabel: "만든 작품",
+      placeLabel: "사용한 재료",
+      status: "pending",
+      feedback: "",
+      photoCount: photos.length,
+      submittedAt: Date.now()
+    });
+    const photoCol = postRef(currentName).collection("photos");
+    const old = await photoCol.get();
+    const batch = db.batch();
+    old.docs.forEach(d => batch.delete(d.ref));
+    photos.forEach((p,i)=>{ batch.set(photoCol.doc("p"+i), { order: i, data: p.data }); });
+    await batch.commit();
+    await setStudentStatus(currentName, "pending");
+    toast("만들기 보고서를 제출했어요! 선생님 확인을 기다려요 📮");
+    enterStudent(currentName);
+  }catch(e){
+    btn.disabled = false; btn.textContent = "만들기 보고서 제출하기 📮";
+    toast("제출에 실패했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.");
+    console.error(e);
+  }
+}
+
+/* ─────────── 교사 화면 ─────────── */
+function renderTeacherLogin(){
+  currentName = null;
+  app.innerHTML = `
+    <div class="card login-box">
+      <h2>👩‍🏫 선생님 확인</h2>
+      <input id="pinInput" type="password" placeholder="비밀번호 입력" maxlength="10" inputmode="numeric">
+      <button class="btn btn-navy btn-block" id="pinBtn">들어가기</button>
+      <button class="btn btn-ghost" id="backBtn" style="margin-top:10px;">← 학생 화면으로</button>
+    </div>`;
+  const input = document.getElementById("pinInput");
+  const go = ()=>{
+    if(input.value === TEACHER_PIN) renderTeacher();
+    else { toast("비밀번호가 달라요!"); input.value=""; }
+  };
+  document.getElementById("pinBtn").onclick = go;
+  input.addEventListener("keydown", e=>{ if(e.key==="Enter") go(); });
+  document.getElementById("backBtn").onclick = renderLogin;
+  input.focus();
+}
+
+async function renderTeacher(){
+  app.innerHTML = `<div class="loading">제출된 만들기 보고서를 불러오는 중...</div>`;
+  let posts = [];
+  try{
+    const snap = await db.collection("missions").doc(MISSION_ID).collection("posts")
+      .orderBy("submittedAt","desc").get();
+    posts = snap.docs.map(d=>d.data());
+  }catch(e){
+    app.innerHTML = `<div class="card"><h2>⚠️ 불러오기 실패</h2><p style="font-size:14px;">${esc(e.message)}</p></div>`;
+    return;
+  }
+
+  const order = { pending:0, hold:1, passed:2 };
+  posts.sort((a,b)=>(order[a.status]??3)-(order[b.status]??3) || b.submittedAt - a.submittedAt);
+  const label = { pending:"확인 대기", hold:"보류", passed:"통과" };
+
+  const items = posts.length ? posts.map(p=>`
+    <div class="post-item" data-name="${esc(p.name)}">
+      <div class="p-head">
+        <span class="p-name">🙋 ${esc(p.name)}</span>
+        <span class="p-badge ${p.status}">${label[p.status]||p.status}</span>
+      </div>
+      <div class="p-meta">만든 작품: <b>${esc(p.subject||"-")}</b> · 재료: ${esc(p.place||"-")} · ${new Date(p.submittedAt).toLocaleString("ko-KR")}</div>
+      <div class="p-text">${esc(p.text||"")}</div>
+      <div class="p-photos" data-photos="${esc(p.name)}"><span style="font-size:12px;color:#93A96F;">사진 불러오는 중...</span></div>
+      ${p.status !== "passed" ? `
+      <div class="field" style="margin-bottom:8px;">
+        <input type="text" data-feedback="${esc(p.name)}" maxlength="100" placeholder="보류 시 학생에게 보낼 한마디 (선택)" value="${esc(p.feedback||"")}" style="width:100%;font-family:inherit;font-size:13px;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;outline:none;">
+      </div>
+      <div class="p-btns">
+        <button class="btn btn-green" data-act="passed" data-name="${esc(p.name)}">✅ 통과</button>
+        <button class="btn btn-red" data-act="hold" data-name="${esc(p.name)}">↩️ 보류</button>
+      </div>` : ``}
+    </div>`).join("")
+    : `<div class="empty-msg">아직 제출된 작품이 없어요.</div>`;
+
+  app.innerHTML = `
+    <div class="topbar">
+      <span class="who">👩‍🏫 선생님 화면</span>
+      <div>
+        <button class="mini-btn" id="refreshBtn">🔄 새로고침</button>
+        <button class="mini-btn" id="logoutBtn">나가기</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>📮 제출된 만들기 작품 (${posts.length})</h2>
+      ${items}
+    </div>`;
+
+  document.getElementById("refreshBtn").onclick = renderTeacher;
+  document.getElementById("logoutBtn").onclick = renderLogin;
+
+  posts.forEach(async p=>{
+    const box = app.querySelector(`[data-photos="${CSS.escape(p.name)}"]`);
+    if(!box) return;
+    try{
+      const list = await getPhotos(p.name);
+      box.innerHTML = list.map(d=>`<img src="${d}" alt="작품 사진">`).join("") || `<span style="font-size:12px;color:#93A96F;">사진 없음</span>`;
+      box.querySelectorAll("img").forEach(img=>{ img.onclick=()=>openLightbox(img.src); });
+    }catch(e){
+      box.innerHTML = `<span style="font-size:12px;color:#B33227;">사진 로딩 실패</span>`;
+    }
+  });
+
+  app.querySelectorAll("[data-act]").forEach(btn=>{
+    btn.onclick = async ()=>{
+      const name = btn.dataset.name, act = btn.dataset.act;
+      btn.disabled = true;
+      const fbInput = app.querySelector(`[data-feedback="${CSS.escape(name)}"]`);
+      const feedback = fbInput ? fbInput.value.trim() : "";
+      try{
+        await postRef(name).set({ status: act, feedback }, { merge:true });
+        await setStudentStatus(name, act);
+        toast(act==="passed" ? `${name} 통과 처리! 빙고판에 도장이 찍혔어요.` : `${name} 보류 처리했어요.`);
+        renderTeacher();
+      }catch(e){
+        btn.disabled = false;
+        toast("처리에 실패했어요. 다시 시도해 주세요.");
+      }
+    };
+  });
+}
+
+init();
+</script>
+</body>
+</html>

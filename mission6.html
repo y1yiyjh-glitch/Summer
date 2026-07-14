@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>미션 6. 마음을 담은 편지쓰기</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FAF3E3;             /* 편지지 크림색 배경 */
+    --main:#B98A48;           /* 크라프트 갈색 */
+    --main-dark:#8F6529;
+    --stamp-red:#D9534F;      /* 우표 빨강 */
+    --paper:#FFFEF8;
+    --line:#EBDCC0;
+    --ink:#2B2B2B;
+    --navy:#1B4B8F;
+    --title-red:#E8493A;
+    --pending:#F59E0B;
+    --hold:#E8493A;
+    --pass:#2E9E5B;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    font-family:'Gowun Dodum',sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    min-height:100vh;
+  }
+  .wrap{max-width:560px;margin:0 auto;padding:20px 14px 60px;}
+
+  /* ── 헤더 ── */
+  .hero{text-align:center;padding:18px 0 6px;}
+  .hero .icon{font-size:34px;margin-bottom:4px;}
+  .hero .mission-no{
+    display:inline-block;background:var(--main);color:#fff;
+    font-family:'Jua',sans-serif;font-size:13px;
+    padding:5px 14px;border-radius:999px;margin-bottom:10px;
+  }
+  .hero h1{
+    font-family:'Jua',sans-serif;
+    font-size:clamp(24px,6.5vw,32px);
+    color:var(--main-dark);
+    line-height:1.35;
+    word-break:keep-all;
+  }
+  .hero .back-link{margin-top:10px;}
+  .hero .back-link a{font-size:13px;color:var(--navy);}
+
+  /* ── 카드 공통 ── */
+  .card{
+    background:var(--paper);
+    border-radius:18px;
+    padding:20px 18px;
+    margin-top:16px;
+    box-shadow:0 4px 14px rgba(143,101,41,.12);
+  }
+  .card h2{
+    font-family:'Jua',sans-serif;color:var(--main-dark);
+    font-size:17px;margin-bottom:12px;
+  }
+
+  /* ── 과제 설명 ── */
+  .howto{list-style:none;}
+  .howto li{
+    position:relative;padding:8px 0 8px 34px;
+    font-size:14px;line-height:1.65;word-break:keep-all;
+    border-bottom:1px dashed var(--line);
+  }
+  .howto li:last-child{border-bottom:none;}
+  .howto li .step{
+    position:absolute;left:0;top:9px;
+    width:24px;height:24px;border-radius:50%;
+    background:var(--main);color:#fff;
+    font-family:'Jua',sans-serif;font-size:13px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .tip{
+    margin-top:12px;background:#F8F1E2;border-radius:12px;
+    padding:11px 14px;font-size:12.5px;line-height:1.7;color:#8F6E3A;
+    word-break:keep-all;
+  }
+
+  /* ── 로그인 ── */
+  .login-box{text-align:center;}
+  .login-box input{
+    width:100%;font-family:inherit;font-size:17px;
+    padding:12px 16px;border:2px solid var(--line);border-radius:12px;
+    outline:none;text-align:center;
+  }
+  .login-box input:focus{border-color:var(--main);}
+  .btn{
+    font-family:'Jua',sans-serif;font-size:16px;
+    border:none;border-radius:12px;padding:13px 20px;
+    cursor:pointer;transition:transform .1s;
+  }
+  .btn:active{transform:scale(.97);}
+  .btn-main{background:var(--main);color:#fff;}
+  .btn-green{background:var(--pass);color:#fff;}
+  .btn-red{background:var(--title-red);color:#fff;}
+  .btn-navy{background:var(--navy);color:#fff;}
+  .btn-ghost{background:none;color:var(--navy);font-size:13px;text-decoration:underline;padding:8px;}
+  .btn-block{width:100%;margin-top:12px;}
+  .btn:disabled{opacity:.55;cursor:default;}
+
+  /* ── 상단바 ── */
+  .topbar{
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--paper);border-radius:14px;
+    padding:10px 16px;margin-top:16px;
+    box-shadow:0 3px 10px rgba(143,101,41,.1);
+  }
+  .topbar .who{font-family:'Jua',sans-serif;color:var(--main-dark);font-size:16px;}
+  .mini-btn{
+    font-family:inherit;font-size:12.5px;
+    border:1.5px solid var(--line);background:#F8F1E2;
+    border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--main-dark);
+  }
+
+  /* ── 상태 배너 ── */
+  .status-banner{
+    margin-top:14px;border-radius:14px;padding:13px 16px;
+    font-size:14px;line-height:1.6;word-break:keep-all;
+  }
+  .status-banner.none{background:#F8F1E2;color:#8F6E3A;}
+  .status-banner.pending{background:#FFF4DE;color:#9A6B0B;}
+  .status-banner.hold{background:#FDEBEA;color:#B33227;}
+  .status-banner.passed{background:#E9F7EF;color:#1F7A43;}
+
+  /* ── 받는 사람 선택 칩 ── */
+  .chip-row{display:flex;gap:8px;flex-wrap:wrap;}
+  .chip{
+    font-family:'Jua',sans-serif;font-size:14px;
+    padding:9px 18px;border-radius:999px;
+    border:2px solid var(--line);background:#fff;color:#8F6E3A;
+    cursor:pointer;transition:all .12s;
+  }
+  .chip.on{
+    background:var(--main);border-color:var(--main);color:#fff;
+    transform:scale(1.05);
+  }
+
+  /* ── 편지지 폼 ── */
+  .field{margin-bottom:14px;}
+  .field label{
+    display:block;font-family:'Jua',sans-serif;
+    font-size:14px;color:var(--main-dark);margin-bottom:6px;
+  }
+  .field label .opt{font-size:11.5px;color:#BCA37A;font-family:'Gowun Dodum',sans-serif;}
+  .field input[type=text], .field textarea{
+    width:100%;font-family:inherit;font-size:15px;
+    padding:11px 13px;border:2px solid var(--line);border-radius:12px;
+    outline:none;background:#fff;
+  }
+  .field input:focus, .field textarea:focus{border-color:var(--main);}
+  .letter-paper{
+    position:relative;
+    border:2px solid var(--line);border-radius:14px;
+    background:#FFFDF5;
+    padding:14px;
+  }
+  .letter-paper::before{
+    content:"💌";
+    position:absolute;top:-14px;right:14px;
+    font-size:26px;
+    background:var(--paper);
+    padding:0 6px;
+  }
+  .letter-paper textarea{
+    width:100%;min-height:240px;border:none;outline:none;
+    font-family:inherit;font-size:15px;line-height:1.9;
+    resize:vertical;background:transparent;
+    background-image:repeating-linear-gradient(transparent,transparent 27px,#F0E4CB 27px,#F0E4CB 28px);
+    background-attachment:local;
+  }
+  .char-count{text-align:right;font-size:11.5px;color:#BCA37A;margin-top:3px;}
+  .helper-q{
+    background:#FDF6E8;border-left:4px solid var(--main);
+    border-radius:0 10px 10px 0;
+    padding:10px 12px;font-size:12.5px;line-height:1.8;color:#8F6E3A;
+    margin-bottom:8px;word-break:keep-all;
+  }
+
+  /* ── 사진 업로드 ── */
+  .photo-area{margin-bottom:6px;}
+  .photo-grid{
+    display:grid;grid-template-columns:repeat(3,1fr);
+    gap:8px;margin-top:8px;
+  }
+  .photo-thumb{
+    position:relative;border-radius:12px;overflow:hidden;
+    aspect-ratio:1;background:#F8F1E2;border:2px solid var(--line);
+  }
+  .photo-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  .photo-thumb .del{
+    position:absolute;top:4px;right:4px;
+    width:24px;height:24px;border-radius:50%;
+    background:rgba(0,0,0,.55);color:#fff;border:none;
+    font-size:13px;cursor:pointer;line-height:1;
+  }
+  .photo-add{
+    aspect-ratio:1;border-radius:12px;
+    border:2px dashed var(--main);background:#F8F1E2;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    cursor:pointer;color:var(--main-dark);
+    font-size:12px;gap:4px;font-family:'Jua',sans-serif;
+  }
+  .photo-add span:first-child{font-size:24px;}
+  .photo-note{font-size:11.5px;color:#BCA37A;margin-top:6px;line-height:1.5;}
+
+  /* ── 교사 화면 ── */
+  .post-item{
+    border:1.5px solid var(--line);border-radius:14px;
+    padding:14px;margin-bottom:12px;background:#fff;
+  }
+  .post-item .p-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .post-item .p-name{font-family:'Jua',sans-serif;color:var(--main-dark);font-size:15px;}
+  .p-badge{
+    font-family:'Jua',sans-serif;font-size:11px;color:#fff;
+    padding:3px 10px;border-radius:999px;
+  }
+  .p-badge.pending{background:var(--pending);}
+  .p-badge.hold{background:var(--hold);}
+  .p-badge.passed{background:var(--pass);}
+  .post-item .p-meta{font-size:12px;color:#BCA37A;margin-bottom:8px;}
+  .post-item .p-text{
+    font-size:13.5px;line-height:1.7;white-space:pre-wrap;word-break:break-word;
+    background:#F8F1E2;border-radius:10px;padding:10px 12px;margin-bottom:10px;
+  }
+  .post-item .p-photos{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+  .post-item .p-photos img{
+    width:88px;height:88px;object-fit:cover;border-radius:10px;
+    border:1.5px solid var(--line);cursor:pointer;
+  }
+  .post-item .p-btns{display:flex;gap:8px;}
+  .post-item .p-btns .btn{flex:1;font-size:14px;padding:9px 14px;}
+  .empty-msg{font-size:14px;color:#BCA37A;text-align:center;padding:16px 0;}
+
+  /* ── 사진 크게 보기 ── */
+  .lightbox{
+    position:fixed;inset:0;background:rgba(0,0,0,.8);
+    display:flex;align-items:center;justify-content:center;
+    z-index:100;cursor:pointer;padding:16px;
+  }
+  .lightbox img{max-width:100%;max-height:90vh;border-radius:12px;}
+
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:var(--main-dark);color:#fff;padding:11px 22px;border-radius:999px;
+    font-size:14px;z-index:200;box-shadow:0 4px 14px rgba(0,0,0,.25);
+    animation:pop .2s;
+  }
+  @keyframes pop{from{opacity:0;transform:translateX(-50%) translateY(8px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+  .loading{text-align:center;padding:40px 0;font-family:'Jua',sans-serif;color:var(--main-dark);}
+  .setup-code{
+    background:#3A3222;color:#EFE3C8;border-radius:12px;
+    padding:14px;font-family:monospace;font-size:12px;
+    line-height:1.7;overflow-x:auto;margin:10px 0;white-space:pre;
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="icon">💌</div>
+    <div class="mission-no">미션 6</div>
+    <h1>선생님, 친구, 부모님 중<br>1명에게 편지쓰기</h1>
+    <div class="back-link"><a href="index.html">← 미션 빙고판으로 돌아가기</a></div>
+  </div>
+  <div id="app"><div class="loading">불러오는 중...</div></div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════
+   ★ 설정 구역 — 선생님이 이 부분만 수정하면 됩니다 ★
+   ═══════════════════════════════════════════════════════
+   빙고판(index.html)에 붙여 넣은 것과 똑같은
+   firebaseConfig 값을 아래에 붙여 넣으세요.
+*/
+const firebaseConfig = {
+  apiKey: "AIzaSyCBgz3oLm_dgKBFwGglidasKoENI5PNs7I",
+  authDomain: "summer-vacation-mission.firebaseapp.com",
+  databaseURL: "https://summer-vacation-mission-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "summer-vacation-mission",
+  storageBucket: "summer-vacation-mission.firebasestorage.app",
+  messagingSenderId: "171875205794",
+  appId: "1:171875205794:web:a5cca666fedc22c2b5cdfb",
+  measurementId: "G-H9QZ9NXR39"
+};
+const TEACHER_PIN = "2026";      // 선생님 비밀번호 (빙고판과 동일하게)
+const MISSION_INDEX = 5;         // 이 과제의 빙고판 번호 (미션6 = 5)
+const MISSION_ID = "mission6";   // 저장소에서 이 과제방을 구분하는 이름
+const MAX_PHOTOS = 2;            // 손편지 사진 수 (선택)
+/* ═══════════════════════════════════════════════════════ */
+
+const app = document.getElementById("app");
+let db = null;
+let currentName = null;
+let photos = [];
+let recipientType = "";   // 선생님/친구/부모님
+
+function toast(msg){
+  const t = document.createElement("div");
+  t.className = "toast"; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2400);
+}
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function remember(name){ try{ localStorage.setItem("bingo-name", name); }catch(e){} }
+function recall(){ try{ return localStorage.getItem("bingo-name") || ""; }catch(e){ return ""; } }
+
+/* ─────────── 시작 ─────────── */
+function init(){
+  if(firebaseConfig.apiKey === "여기에_붙여넣기"){
+    app.innerHTML = `
+      <div class="card">
+        <h2>🔧 선생님, 먼저 설정이 필요해요</h2>
+        <p style="font-size:14px;line-height:1.8;word-break:keep-all;">
+          이 파일을 열어 위쪽의 <b>firebaseConfig</b> 부분에
+          빙고판과 똑같은 Firebase 설정값을 붙여 넣어 주세요.</p>
+        <div class="setup-code">const firebaseConfig = {
+  apiKey: "AIza...",
+  authDomain: "프로젝트명.firebaseapp.com",
+  projectId: "프로젝트명",
+  ...
+};</div>
+      </div>`;
+    return;
+  }
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+  }catch(e){
+    app.innerHTML = `<div class="card"><h2>⚠️ 연결 오류</h2>
+      <p style="font-size:14px;line-height:1.7;">Firebase 설정값이 올바른지 확인해 주세요.<br>오류: ${esc(e.message)}</p></div>`;
+    return;
+  }
+  const params = new URLSearchParams(location.search);
+  const nameFromUrl = (params.get("name") || "").trim().replace(/\s+/g,"");
+  const saved = recall();
+  if(nameFromUrl){ remember(nameFromUrl); enterStudent(nameFromUrl); }
+  else if(saved){ enterStudent(saved); }
+  else { renderLogin(); }
+}
+
+/* ─────────── 과제 설명 카드 ─────────── */
+function guideCard(){
+  return `
+    <div class="card">
+      <h2>💌 이렇게 해 보세요</h2>
+      <ul class="howto">
+        <li><span class="step">1</span><b>선생님, 친구, 부모님</b> 중에서 편지를 쓰고 싶은 한 사람을 정해요.</li>
+        <li><span class="step">2</span>그 사람에게 <b>전하고 싶은 마음</b>을 떠올려 보세요. 고마웠던 일, 미안했던 일, 함께한 추억, 하고 싶은 말...</li>
+        <li><span class="step">3</span>편지 형식에 맞춰 정성껏 써요: <b>받는 사람 → 첫인사 → 하고 싶은 말 → 끝인사 → 쓴 날짜와 내 이름</b></li>
+        <li><span class="step">4</span>여기에 직접 입력하거나, <b>손으로 쓴 편지</b>를 사진으로 찍어 올려서 제출해요.</li>
+      </ul>
+      <div class="tip">💡 편지는 제출로 끝나지 않아요! 손편지로 써서 그 사람에게 <b>직접 전해 드리면</b> 받는 사람이 정말 기뻐할 거예요. 편지를 전하는 모습까지 상상하며 써 보세요.</div>
+    </div>`;
+}
+
+/* ─────────── 로그인 ─────────── */
+function renderLogin(){
+  currentName = null;
+  app.innerHTML = guideCard() + `
+    <div class="card login-box">
+      <h2>이름을 입력하고 편지를 써요!</h2>
+      <input id="nameInput" type="text" placeholder="예) 김하늘" maxlength="10" autocomplete="off">
+      <button class="btn btn-main btn-block" id="startBtn">편지 쓰러 가기 ✉️</button>
+      <button class="btn btn-ghost" id="teacherBtn" style="margin-top:10px;">선생님 화면</button>
+    </div>`;
+  const input = document.getElementById("nameInput");
+  const go = () => {
+    const name = input.value.trim().replace(/\s+/g,"");
+    if(name.length < 2){ toast("이름을 정확히 입력해 주세요!"); return; }
+    remember(name);
+    enterStudent(name);
+  };
+  document.getElementById("startBtn").onclick = go;
+  input.addEventListener("keydown", e => { if(e.key==="Enter") go(); });
+  document.getElementById("teacherBtn").onclick = renderTeacherLogin;
+}
+
+/* ─────────── Firestore 도우미 ─────────── */
+function postRef(name){ return db.collection("missions").doc(MISSION_ID).collection("posts").doc(name); }
+function studentRef(name){ return db.collection("students").doc(name); }
+
+async function getPost(name){
+  const snap = await postRef(name).get();
+  return snap.exists ? snap.data() : null;
+}
+async function getPhotos(name){
+  const snap = await postRef(name).collection("photos").orderBy("order").get();
+  return snap.docs.map(d => d.data().data);
+}
+async function setStudentStatus(name, status){
+  const ref = studentRef(name);
+  const snap = await ref.get();
+  let statuses = Array(9).fill("none");
+  let extra = {};
+  if(snap.exists){
+    const d = snap.data();
+    if(Array.isArray(d.statuses)) statuses = d.statuses.slice();
+    while(statuses.length < 9) statuses.push("none");
+    if(d.reflection) extra.reflection = d.reflection;
+  }
+  statuses[MISSION_INDEX] = status;
+  await ref.set({ statuses, updatedAt: Date.now(), ...extra }, { merge: true });
+}
+
+/* ─────────── 학생 화면 ─────────── */
+async function enterStudent(name){
+  currentName = name;
+  app.innerHTML = `<div class="loading">편지지를 준비하는 중...</div>`;
+  let post = null;
+  try{ post = await getPost(name); }
+  catch(e){
+    app.innerHTML = `<div class="card"><h2>⚠️ 불러오기 실패</h2>
+      <p style="font-size:14px;line-height:1.7;word-break:keep-all;">인터넷 연결과 Firebase 설정을 확인해 주세요.<br>(${esc(e.message)})</p></div>`;
+    return;
+  }
+  photos = [];
+  recipientType = post ? (post.recipientType || "") : "";
+  if(post && post.status !== "passed"){
+    try{ photos = (await getPhotos(name)).map(data => ({data})); }catch(e){}
+  }
+  renderStudent(post);
+}
+
+function renderStudent(post){
+  const st = post ? post.status : null;
+  let banner = "";
+  if(!post){
+    banner = `<div class="status-banner none">✉️ 아직 제출 전이에요. 마음을 담은 편지를 완성해서 제출해 주세요!</div>`;
+  } else if(st === "pending"){
+    banner = `<div class="status-banner pending">📮 제출 완료! 선생님이 확인하고 있어요. 내용을 고쳐서 다시 제출할 수도 있어요.</div>`;
+  } else if(st === "hold"){
+    banner = `<div class="status-banner hold">😢 <b>보류</b>되었어요. 아래 내용을 보완해서 다시 제출해 주세요!` +
+      (post.feedback ? `<br>👩‍🏫 선생님 말씀: ${esc(post.feedback)}` : "") + `</div>`;
+  } else if(st === "passed"){
+    banner = `<div class="status-banner passed">🎉 <b>통과!</b> 편지쓰기 미션 성공! 빙고판에 도장이 찍혔어요. 이제 편지를 직접 전해 볼까요? 💌</div>`;
+  }
+
+  const editable = st !== "passed";
+
+  const chipHtml = ["선생님","친구","부모님"].map(t=>
+    `<button type="button" class="chip ${recipientType===t?"on":""}" data-chip="${t}">${t}</button>`).join("");
+
+  const formHtml = editable ? `
+    <div class="card">
+      <h2>✍️ 나의 편지</h2>
+      <div class="field">
+        <label>누구에게 쓰는 편지인가요?</label>
+        <div class="chip-row" style="margin-bottom:10px;">${chipHtml}</div>
+        <input type="text" id="subjectInput" maxlength="20" placeholder="예) 엄마께, 담임 선생님께, 짝꿍 하늘이에게"
+          value="${post ? esc(post.subject||"") : ""}">
+      </div>
+      <div class="field">
+        <label>편지 내용</label>
+        <div class="helper-q">✉️ 편지의 순서를 기억해요<br>
+        받는 사람 → 첫인사 (안녕하세요? 잘 지내니?) → 하고 싶은 말 → 끝인사 → 쓴 날짜와 내 이름</div>
+        <div class="letter-paper">
+          <textarea id="textInput" maxlength="1500" placeholder="사랑하는 엄마께&#10;&#10;엄마, 안녕하세요? ...">${post ? esc(post.text||"") : ""}</textarea>
+        </div>
+        <div class="char-count"><span id="charNow">${post && post.text ? post.text.length : 0}</span> / 1500자</div>
+      </div>
+      <div class="field photo-area">
+        <label>손편지 사진 <span class="opt">(손으로 편지를 썼다면 사진으로 올려도 돼요, 최대 ${MAX_PHOTOS}장)</span></label>
+        <div class="photo-grid" id="photoGrid"></div>
+        <div class="photo-note">📷 위에 직접 입력하거나, 손편지 사진을 올리거나, 둘 중 하나만 해도 괜찮아요!</div>
+        <input type="file" id="photoInput" accept="image/*" multiple style="display:none;">
+      </div>
+      <button class="btn btn-red btn-block" id="submitBtn">${st==="hold" ? "다시 제출하기 💪" : (st==="pending" ? "수정해서 다시 제출하기 ✏️" : "편지 제출하기 📮")}</button>
+    </div>` : `
+    <div class="card">
+      <h2>✍️ 제출한 편지</h2>
+      <div class="field"><label>받는 사람</label><div style="font-size:15px;">${esc(post.recipientType||"")} · ${esc(post.subject||"-")}</div></div>
+      ${post.text ? `<div class="field"><label>편지 내용</label>
+        <div style="font-size:14px;line-height:1.9;white-space:pre-wrap;word-break:break-word;background:#F8F1E2;border-radius:10px;padding:14px;">${esc(post.text)}</div>
+      </div>` : ""}
+      <div class="photo-grid" id="passedPhotos"></div>
+    </div>`;
+
+  app.innerHTML = `
+    <div class="topbar">
+      <span class="who">🙋 ${esc(currentName)}</span>
+      <div>
+        <button class="mini-btn" id="refreshBtn">🔄 새로고침</button>
+        <button class="mini-btn" id="logoutBtn">이름 바꾸기</button>
+      </div>
+    </div>
+    ${banner}
+    ${guideCard()}
+    ${formHtml}`;
+
+  document.getElementById("refreshBtn").onclick = () => enterStudent(currentName);
+  document.getElementById("logoutBtn").onclick = () => { try{localStorage.removeItem("bingo-name");}catch(e){} renderLogin(); };
+
+  if(editable){
+    app.querySelectorAll("[data-chip]").forEach(chip=>{
+      chip.onclick = ()=>{
+        recipientType = chip.dataset.chip;
+        app.querySelectorAll("[data-chip]").forEach(c=>c.classList.toggle("on", c.dataset.chip===recipientType));
+      };
+    });
+    const ta = document.getElementById("textInput");
+    ta.addEventListener("input", ()=>{ document.getElementById("charNow").textContent = ta.value.length; });
+    renderPhotoGrid();
+    document.getElementById("photoInput").addEventListener("change", handlePhotoSelect);
+    document.getElementById("submitBtn").onclick = submitPost;
+  } else if(post){
+    getPhotos(currentName).then(list=>{
+      const grid = document.getElementById("passedPhotos");
+      if(grid) grid.innerHTML = list.map(d=>`<div class="photo-thumb"><img src="${d}" alt="손편지 사진"></div>`).join("");
+      grid.querySelectorAll("img").forEach(img=>{ img.onclick = ()=>openLightbox(img.src); });
+    }).catch(()=>{});
+  }
+}
+
+/* ─────────── 사진 처리 ─────────── */
+function renderPhotoGrid(){
+  const grid = document.getElementById("photoGrid");
+  if(!grid) return;
+  let html = photos.map((p,idx)=>`
+    <div class="photo-thumb">
+      <img src="${p.data}" alt="사진 ${idx+1}">
+      <button class="del" data-del="${idx}" aria-label="사진 삭제">✕</button>
+    </div>`).join("");
+  if(photos.length < MAX_PHOTOS){
+    html += `<div class="photo-add" id="addPhoto" role="button" tabindex="0"><span>💌</span><span>사진 추가</span></div>`;
+  }
+  grid.innerHTML = html;
+  const add = document.getElementById("addPhoto");
+  if(add){
+    const open = ()=>document.getElementById("photoInput").click();
+    add.onclick = open;
+    add.onkeydown = e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();open();} };
+  }
+  grid.querySelectorAll("[data-del]").forEach(btn=>{
+    btn.onclick = ()=>{ photos.splice(parseInt(btn.dataset.del),1); renderPhotoGrid(); };
+  });
+  grid.querySelectorAll(".photo-thumb img").forEach(img=>{
+    img.onclick = ()=>openLightbox(img.src);
+  });
+}
+
+async function handlePhotoSelect(e){
+  const files = Array.from(e.target.files || []);
+  e.target.value = "";
+  for(const file of files){
+    if(photos.length >= MAX_PHOTOS){ toast(`사진은 최대 ${MAX_PHOTOS}장까지예요!`); break; }
+    if(!file.type.startsWith("image/")){ continue; }
+    try{
+      const data = await compressImage(file);
+      photos.push({ data });
+      renderPhotoGrid();
+    }catch(err){
+      toast("사진을 불러오지 못했어요. 다른 사진으로 시도해 보세요.");
+    }
+  }
+}
+
+function compressImage(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onerror = ()=>reject(new Error("read fail"));
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onerror = ()=>reject(new Error("img fail"));
+      img.onload = ()=>{
+        const MAX = 1200; // 손편지 글씨가 보여야 하니 조금 크게
+        let w = img.width, h = img.height;
+        if(w > MAX || h > MAX){
+          const r = Math.min(MAX/w, MAX/h);
+          w = Math.round(w*r); h = Math.round(h*r);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        let q = 0.75;
+        let out = canvas.toDataURL("image/jpeg", q);
+        while(out.length > 700000 && q > 0.3){
+          q -= 0.1;
+          out = canvas.toDataURL("image/jpeg", q);
+        }
+        if(out.length > 900000) reject(new Error("too big"));
+        else resolve(out);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function openLightbox(src){
+  const lb = document.createElement("div");
+  lb.className = "lightbox";
+  lb.innerHTML = `<img src="${src}" alt="사진 크게 보기">`;
+  lb.onclick = ()=>lb.remove();
+  document.body.appendChild(lb);
+}
+
+/* ─────────── 제출 ─────────── */
+async function submitPost(){
+  const subject = document.getElementById("subjectInput").value.trim();
+  const text = document.getElementById("textInput").value.trim();
+  if(!recipientType){ toast("누구에게 쓰는 편지인지 선택해 주세요! (선생님/친구/부모님)"); return; }
+  if(!subject){ toast("받는 사람을 써 주세요! (예: 엄마께)"); return; }
+  if(text.length < 30 && photos.length === 0){
+    toast("편지를 30자 이상 쓰거나, 손편지 사진을 올려 주세요!"); return;
+  }
+
+  const btn = document.getElementById("submitBtn");
+  btn.disabled = true; btn.textContent = "제출하는 중...";
+
+  try{
+    await postRef(currentName).set({
+      name: currentName,
+      subject, place: recipientType, text,
+      subjectLabel: "받는 사람",
+      placeLabel: "대상",
+      recipientType,
+      status: "pending",
+      feedback: "",
+      photoCount: photos.length,
+      submittedAt: Date.now()
+    });
+    const photoCol = postRef(currentName).collection("photos");
+    const old = await photoCol.get();
+    const batch = db.batch();
+    old.docs.forEach(d => batch.delete(d.ref));
+    photos.forEach((p,i)=>{ batch.set(photoCol.doc("p"+i), { order: i, data: p.data }); });
+    await batch.commit();
+    await setStudentStatus(currentName, "pending");
+    toast("편지를 제출했어요! 선생님 확인을 기다려요 📮");
+    enterStudent(currentName);
+  }catch(e){
+    btn.disabled = false; btn.textContent = "편지 제출하기 📮";
+    toast("제출에 실패했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.");
+    console.error(e);
+  }
+}
+
+/* ─────────── 교사 화면 ─────────── */
+function renderTeacherLogin(){
+  currentName = null;
+  app.innerHTML = `
+    <div class="card login-box">
+      <h2>👩‍🏫 선생님 확인</h2>
+      <input id="pinInput" type="password" placeholder="비밀번호 입력" maxlength="10" inputmode="numeric">
+      <button class="btn btn-navy btn-block" id="pinBtn">들어가기</button>
+      <button class="btn btn-ghost" id="backBtn" style="margin-top:10px;">← 학생 화면으로</button>
+    </div>`;
+  const input = document.getElementById("pinInput");
+  const go = ()=>{
+    if(input.value === TEACHER_PIN) renderTeacher();
+    else { toast("비밀번호가 달라요!"); input.value=""; }
+  };
+  document.getElementById("pinBtn").onclick = go;
+  input.addEventListener("keydown", e=>{ if(e.key==="Enter") go(); });
+  document.getElementById("backBtn").onclick = renderLogin;
+  input.focus();
+}
+
+async function renderTeacher(){
+  app.innerHTML = `<div class="loading">제출된 편지를 불러오는 중...</div>`;
+  let posts = [];
+  try{
+    const snap = await db.collection("missions").doc(MISSION_ID).collection("posts")
+      .orderBy("submittedAt","desc").get();
+    posts = snap.docs.map(d=>d.data());
+  }catch(e){
+    app.innerHTML = `<div class="card"><h2>⚠️ 불러오기 실패</h2><p style="font-size:14px;">${esc(e.message)}</p></div>`;
+    return;
+  }
+
+  const order = { pending:0, hold:1, passed:2 };
+  posts.sort((a,b)=>(order[a.status]??3)-(order[b.status]??3) || b.submittedAt - a.submittedAt);
+  const label = { pending:"확인 대기", hold:"보류", passed:"통과" };
+
+  const items = posts.length ? posts.map(p=>`
+    <div class="post-item" data-name="${esc(p.name)}">
+      <div class="p-head">
+        <span class="p-name">🙋 ${esc(p.name)}</span>
+        <span class="p-badge ${p.status}">${label[p.status]||p.status}</span>
+      </div>
+      <div class="p-meta">받는 사람: <b>${esc(p.recipientType||"")} · ${esc(p.subject||"-")}</b> · ${new Date(p.submittedAt).toLocaleString("ko-KR")}</div>
+      ${p.text ? `<div class="p-text">${esc(p.text)}</div>` : ""}
+      <div class="p-photos" data-photos="${esc(p.name)}"><span style="font-size:12px;color:#BCA37A;">사진 확인 중...</span></div>
+      ${p.status !== "passed" ? `
+      <div class="field" style="margin-bottom:8px;">
+        <input type="text" data-feedback="${esc(p.name)}" maxlength="100" placeholder="보류 시 학생에게 보낼 한마디 (선택)" value="${esc(p.feedback||"")}" style="width:100%;font-family:inherit;font-size:13px;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;outline:none;">
+      </div>
+      <div class="p-btns">
+        <button class="btn btn-green" data-act="passed" data-name="${esc(p.name)}">✅ 통과</button>
+        <button class="btn btn-red" data-act="hold" data-name="${esc(p.name)}">↩️ 보류</button>
+      </div>` : ``}
+    </div>`).join("")
+    : `<div class="empty-msg">아직 제출된 편지가 없어요.</div>`;
+
+  app.innerHTML = `
+    <div class="topbar">
+      <span class="who">👩‍🏫 선생님 화면</span>
+      <div>
+        <button class="mini-btn" id="refreshBtn">🔄 새로고침</button>
+        <button class="mini-btn" id="logoutBtn">나가기</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>📮 제출된 편지 (${posts.length})</h2>
+      ${items}
+    </div>`;
+
+  document.getElementById("refreshBtn").onclick = renderTeacher;
+  document.getElementById("logoutBtn").onclick = renderLogin;
+
+  posts.forEach(async p=>{
+    const box = app.querySelector(`[data-photos="${CSS.escape(p.name)}"]`);
+    if(!box) return;
+    try{
+      const list = await getPhotos(p.name);
+      box.innerHTML = list.length
+        ? list.map(d=>`<img src="${d}" alt="손편지 사진">`).join("")
+        : `<span style="font-size:12px;color:#BCA37A;">손편지 사진 없음</span>`;
+      box.querySelectorAll("img").forEach(img=>{ img.onclick=()=>openLightbox(img.src); });
+    }catch(e){
+      box.innerHTML = `<span style="font-size:12px;color:#B33227;">사진 로딩 실패</span>`;
+    }
+  });
+
+  app.querySelectorAll("[data-act]").forEach(btn=>{
+    btn.onclick = async ()=>{
+      const name = btn.dataset.name, act = btn.dataset.act;
+      btn.disabled = true;
+      const fbInput = app.querySelector(`[data-feedback="${CSS.escape(name)}"]`);
+      const feedback = fbInput ? fbInput.value.trim() : "";
+      try{
+        await postRef(name).set({ status: act, feedback }, { merge:true });
+        await setStudentStatus(name, act);
+        toast(act==="passed" ? `${name} 통과 처리! 빙고판에 도장이 찍혔어요.` : `${name} 보류 처리했어요.`);
+        renderTeacher();
+      }catch(e){
+        btn.disabled = false;
+        toast("처리에 실패했어요. 다시 시도해 주세요.");
+      }
+    };
+  });
+}
+
+init();
+</script>
+</body>
+</html>
