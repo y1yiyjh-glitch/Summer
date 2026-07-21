@@ -317,7 +317,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <!-- PDF 생성 -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 /* ═══════════════════════════════════════════════════════
    ★ 설정 구역 — 선생님이 이 부분만 수정하면 됩니다 ★
@@ -951,7 +952,9 @@ function renderStudentDetail(box, name, statuses, student, detail){
 
 /* ─────────── PDF 보고서 출력 ─────────── */
 async function exportStudentPdf(name, statuses, student, detail, btn){
-  if(typeof html2pdf === "undefined"){ toast("PDF 도구를 불러오지 못했어요. 인터넷 연결을 확인해 주세요."); return; }
+  if(typeof html2canvas === "undefined" || typeof window.jspdf === "undefined"){
+    toast("PDF 도구를 불러오지 못했어요. 인터넷 연결을 확인해 주세요."); return;
+  }
   btn.disabled = true;
   const original = btn.textContent;
   btn.textContent = "보고서를 만드는 중... 잠시만요";
@@ -985,9 +988,12 @@ async function exportStudentPdf(name, statuses, student, detail, btn){
       </div>`
     : "";
 
-  // 화면 밖에 실제로 붙여서 렌더링을 확실히 시킴 (안 붙이면 이미지가 안 그려져 페이지가 어긋남)
+  // 화면 안에 실제로 보이게 오버레이로 띄운 뒤 캡처 → 곧바로 제거
+  // (화면 밖 left:-9999px 방식은 일부 브라우저에서 빈 캡처가 되어 사용하지 않음)
+  const overlay = document.createElement("div");
+  overlay.style.cssText = "position:fixed;inset:0;z-index:9999;background:rgba(20,40,70,.5);overflow:auto;padding:20px 0;";
   const wrapper = document.createElement("div");
-  wrapper.style.cssText = "position:fixed;left:-9999px;top:0;width:720px;padding:28px;font-family:'Gowun Dodum',sans-serif;background:#fff;color:#222;box-sizing:border-box;";
+  wrapper.style.cssText = "width:720px;margin:0 auto;padding:28px;font-family:'Gowun Dodum',sans-serif;background:#fff;color:#222;box-sizing:border-box;border-radius:8px;";
   wrapper.innerHTML = `
     <div style="text-align:center;border-bottom:3px solid #E8493A;padding-bottom:14px;margin-bottom:18px;">
       <div style="font-family:'Jua',sans-serif;font-size:24px;color:#E8493A;">🏆 여름방학 미션 빙고 보고서</div>
@@ -998,8 +1004,10 @@ async function exportStudentPdf(name, statuses, student, detail, btn){
     ${reflectionBlock}
     <div style="margin-top:22px;padding-top:12px;border-top:1px dashed #ccc;font-size:12px;color:#999;text-align:center;">
       여름방학 미션 빙고를 열심히 해낸 것을 축하합니다! 🎉
-    </div>`;
-  document.body.appendChild(wrapper);
+    </div>
+    <div style="text-align:center;font-size:12px;color:#B9C5D3;margin-top:14px;">PDF를 만드는 중이에요... 잠시만 기다려 주세요 📄</div>`;
+  overlay.appendChild(wrapper);
+  document.body.appendChild(overlay);
 
   try{
     // 모든 이미지가 완전히 로드될 때까지 기다린 뒤 캡처 (누락 방지의 핵심)
@@ -1007,22 +1015,42 @@ async function exportStudentPdf(name, statuses, student, detail, btn){
     await Promise.all(imgs.map(img => (img.complete && img.naturalWidth)
       ? Promise.resolve()
       : new Promise(res => { img.onload = res; img.onerror = res; })));
-    await new Promise(r => setTimeout(r, 150)); // 렌더 안정화 여유
+    await new Promise(r => setTimeout(r, 250)); // 렌더 안정화 여유
 
-    await html2pdf().set({
-      margin: [8,8,10,8],
-      filename: `미션빙고_보고서_${name}.pdf`,
-      image: { type:"jpeg", quality:0.9 },
-      html2canvas: { scale:2, useCORS:true, backgroundColor:"#ffffff", windowWidth:776 },
-      jsPDF: { unit:"mm", format:"a4", orientation:"portrait" },
-      pagebreak: { mode:["css","avoid-all"] }
-    }).from(wrapper).save();
+    // html2canvas로 통째로 캡처 후, 페이지 높이에 맞게 잘라서 jsPDF에 필요한 만큼만 추가
+    // (html2pdf 자동 방식에서 생기던 '빈 페이지 / 내용 누락' 문제를 방지)
+    const { jsPDF } = window.jspdf;
+    const canvas = await html2canvas(wrapper, {
+      scale: 2, useCORS: true, backgroundColor: "#ffffff", scrollX: 0, scrollY: 0
+    });
+    const pdf = new jsPDF({ unit:"mm", format:"a4", orientation:"portrait" });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const margin = 8;
+    const usableW = pageW - margin*2;
+    const usableH = pageH - margin*2;
+    const fullHmm = usableW * canvas.height / canvas.width;
+    const pxPerMm = canvas.height / fullHmm;
+    const pageHpx = Math.floor(usableH * pxPerMm);
+    let y = 0, pageNum = 0;
+    while(y < canvas.height - 1){
+      const sliceH = Math.min(pageHpx, canvas.height - y);
+      const pc = document.createElement("canvas");
+      pc.width = canvas.width; pc.height = sliceH;
+      const ctx = pc.getContext("2d");
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, pc.width, pc.height);
+      ctx.drawImage(canvas, 0, y, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+      if(pageNum > 0) pdf.addPage();
+      pdf.addImage(pc.toDataURL("image/jpeg", 0.9), "JPEG", margin, margin, usableW, sliceH / pxPerMm);
+      y += sliceH; pageNum++;
+    }
+    pdf.save(`미션빙고_보고서_${name}.pdf`);
     toast(`${name} 보고서를 저장했어요! 🏆`);
   }catch(e){
     toast("PDF 저장에 실패했어요. 다시 시도해 주세요.");
     console.error(e);
   }finally{
-    document.body.removeChild(wrapper);
+    document.body.removeChild(overlay);
     btn.disabled = false;
     btn.textContent = original;
   }
