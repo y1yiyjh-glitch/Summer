@@ -220,6 +220,40 @@
     font-family:inherit;
   }
   .empty-msg{font-size:14px;color:#8AA5BD;text-align:center;padding:14px 0;}
+
+  /* ── 학생별 현황 클릭/상세 ── */
+  .student-row{cursor:pointer;}
+  .student-row.clickable:hover{background:#F4FAFF;border-radius:8px;}
+  .student-row .chev{color:#B9DCF2;font-size:13px;margin-left:6px;}
+  .student-detail{
+    background:#F7FBFF;border:1.5px solid #E3EEF7;border-radius:12px;
+    padding:12px 14px;margin:6px 0 12px;
+  }
+  .sd-mission{
+    border-bottom:1px dashed #D8E8F4;padding:10px 0;
+  }
+  .sd-mission:last-child{border-bottom:none;}
+  .sd-mhead{font-family:'Jua',sans-serif;font-size:14px;color:var(--navy);margin-bottom:4px;word-break:keep-all;}
+  .sd-meta{font-size:11.5px;color:#8AA5BD;margin-bottom:5px;}
+  .sd-text{
+    font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:break-word;
+    background:#fff;border-radius:8px;padding:8px 10px;
+  }
+  .sd-photos{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+  .sd-photos img{width:66px;height:66px;object-fit:cover;border-radius:8px;border:1.5px solid #D8E8F4;cursor:pointer;}
+  .sd-none{font-size:12.5px;color:#B9C5D3;}
+  .complete-badge{
+    display:inline-block;background:var(--pass);color:#fff;
+    font-family:'Jua',sans-serif;font-size:11px;
+    padding:2px 9px;border-radius:999px;margin-left:6px;
+  }
+  .pdf-btn{
+    background:var(--pass);color:#fff;border:none;
+    font-family:'Jua',sans-serif;font-size:13px;
+    padding:9px 14px;border-radius:10px;cursor:pointer;
+    margin-top:10px;width:100%;
+  }
+  .pdf-btn:disabled{opacity:.6;cursor:default;}
   .toast{
     position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
     background:var(--navy);color:#fff;padding:11px 22px;border-radius:999px;
@@ -282,6 +316,8 @@
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<!-- PDF 생성 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
 /* ═══════════════════════════════════════════════════════
    ★ 설정 구역 — 선생님이 이 부분만 수정하면 됩니다 ★
@@ -299,7 +335,7 @@ const firebaseConfig = {
   appId: "1:171875205794:web:a5cca666fedc22c2b5cdfb",
   measurementId: "G-H9QZ9NXR39"
 };
-const TEACHER_PIN = "2026";   // 선생님 비밀번호
+const TEACHER_PIN = "dlfydqnsry34@";   // 선생님 비밀번호
 const MISSIONS = [
   "여름에 볼 수 있는 식물(곤충) 관찰, 조사하기",
   "음식을 만들고 그림(사진)이 들어간 보고서 쓰기",
@@ -656,13 +692,16 @@ async function renderTeacher(){
 
   // 학생별 현황
   const rowsHtml = students.length
-    ? students.map(s => {
+    ? students.map((s,si) => {
         const st = normalizeStatuses(s);
+        const passedCount = st.filter(x=>x==="passed").length;
+        const allDone = passedCount === 9;
         const dots = st.map(x => `<span class="dot ${x==="passed"?"p":x==="pending"?"w":x==="hold"?"h":""}" title="${x}"></span>`).join("");
-        return `<div class="student-row">
-          <span><b>${esc(s.name)}</b> · ${countBingo(st)}빙고 (${st.filter(x=>x==="passed").length}/9)${s.reflection && s.reflection.text ? " 📝" : ""}</span>
+        return `<div class="student-row clickable" data-student-idx="${si}" data-student-name="${esc(s.name)}">
+          <span><b>${esc(s.name)}</b> · ${countBingo(st)}빙고 (${passedCount}/9)${s.reflection && s.reflection.text ? " 📝" : ""}${allDone ? `<span class="complete-badge">완주 🏆</span>` : ""} <span class="chev">▸</span></span>
           <span class="dots">${dots}</span>
-        </div>`;
+        </div>
+        <div class="student-detail" id="detail-${si}" style="display:none;"></div>`;
       }).join("")
     : `<div class="empty-msg">아직 접속한 학생이 없어요.</div>`;
 
@@ -705,7 +744,8 @@ async function renderTeacher(){
     <div class="section">
       <h3>📊 학생별 현황 (${students.length}명)</h3>
       <div style="font-size:11.5px;color:#8AA5BD;margin-bottom:8px;">
-        ■ 초록=통과 · 노랑=확인 대기 · 빨강=보류 · 회색=미시작 (왼쪽부터 미션 1~9)
+        ■ 초록=통과 · 노랑=확인 대기 · 빨강=보류 · 회색=미시작 (왼쪽부터 미션 1~9)<br>
+        👆 학생 이름을 누르면 통과한 과제물을 볼 수 있어요. 9개를 모두 완주한 학생은 보고서(PDF)로 저장할 수 있어요.
       </div>
       ${rowsHtml}
     </div>
@@ -722,6 +762,26 @@ async function renderTeacher(){
 
   document.getElementById("refreshBtn").onclick = renderTeacher;
   document.getElementById("logoutBtn").onclick = renderLogin;
+
+  // ── 학생별 현황: 이름 클릭 시 통과 과제물 펼치기 ──
+  const loadedDetails = {};
+  app.querySelectorAll("[data-student-idx]").forEach(row=>{
+    row.onclick = async ()=>{
+      const si = row.dataset.studentIdx;
+      const name = row.dataset.studentName;
+      const box = document.getElementById("detail-" + si);
+      if(!box) return;
+      if(box.style.display === "block"){ box.style.display = "none"; return; }
+      box.style.display = "block";
+      if(loadedDetails[si]){ return; }   // 이미 불러왔으면 재사용
+      box.innerHTML = `<div style="font-size:12.5px;color:#8AA5BD;padding:6px;">통과한 과제물을 불러오는 중...</div>`;
+      const student = students.find(s=>s.name===name);
+      const st = normalizeStatuses(student);
+      const detail = await loadStudentSubmissions(name, st);
+      loadedDetails[si] = detail;
+      renderStudentDetail(box, name, st, student, detail);
+    };
+  });
 
   // 각 제출의 과제방 내용(글/사진) 불러오기
   app.querySelectorAll(".r-content").forEach(async box=>{
@@ -803,6 +863,157 @@ async function renderTeacher(){
   };
 }
 
+/* ─────────── 학생 통과 과제물 불러오기 ─────────── */
+async function loadStudentSubmissions(name, statuses){
+  const result = [];
+  for(let i=0;i<9;i++){
+    if(statuses[i] !== "passed") continue;
+    const missionId = "mission" + (i+1);
+    try{
+      const postSnap = await db.collection("missions").doc(missionId)
+        .collection("posts").doc(name).get();
+      let post = postSnap.exists ? postSnap.data() : null;
+      let photos = [];
+      if(post){
+        try{
+          const phSnap = await db.collection("missions").doc(missionId)
+            .collection("posts").doc(name).collection("photos").orderBy("order").get();
+          photos = phSnap.docs.map(d=>d.data().data);
+        }catch(e){}
+      }
+      result.push({ index:i, mission:MISSIONS[i], post, photos });
+    }catch(e){
+      result.push({ index:i, mission:MISSIONS[i], post:null, photos:[], error:true });
+    }
+  }
+  return result;
+}
+
+/* ─────────── 학생 상세 렌더 ─────────── */
+function submissionInner(item){
+  const p = item.post;
+  let metaLine = "";
+  if(p){
+    if(p.subject) metaLine += `${esc(p.subjectLabel||"주제")}: ${esc(p.subject)}`;
+    if(p.place) metaLine += (metaLine?" · ":"") + `${esc(p.placeLabel||"정보")}: ${esc(p.place)}`;
+  }
+  const textHtml = (p && p.text)
+    ? `<div class="sd-text">${esc(p.text)}</div>`
+    : `<div class="sd-none">글 없음 (사진/인증 과제)</div>`;
+  const photoHtml = (item.photos && item.photos.length)
+    ? `<div class="sd-photos">${item.photos.map(d=>`<img src="${d}" alt="과제 사진">`).join("")}</div>`
+    : "";
+  return `
+    ${metaLine ? `<div class="sd-meta">${metaLine}</div>` : ""}
+    ${textHtml}
+    ${photoHtml}`;
+}
+
+function renderStudentDetail(box, name, statuses, student, detail){
+  const passedCount = statuses.filter(x=>x==="passed").length;
+  const allDone = passedCount === 9;
+
+  let html = detail.map(item=>`
+    <div class="sd-mission">
+      <div class="sd-mhead">미션 ${item.index+1}. ${esc(item.mission)}</div>
+      ${submissionInner(item)}
+    </div>`).join("");
+
+  if(!detail.length){
+    html = `<div class="sd-none" style="padding:6px;">아직 통과한 과제가 없어요.</div>`;
+  }
+
+  // 소감문
+  if(student && student.reflection && student.reflection.text){
+    html += `
+    <div class="sd-mission">
+      <div class="sd-mhead">📝 방학 소감문</div>
+      <div class="sd-text">${esc(student.reflection.text)}</div>
+    </div>`;
+  }
+
+  if(allDone){
+    html += `<button class="pdf-btn" data-pdf-name="${esc(name)}">🏆 완주 보고서 PDF로 저장하기</button>`;
+  } else {
+    html += `<div class="sd-none" style="padding:8px 0 2px;">아직 9개를 모두 완주하지 않았어요. (통과 ${passedCount}/9)<br>모두 완주하면 보고서(PDF) 저장 버튼이 나타나요.</div>`;
+  }
+
+  box.innerHTML = html;
+  box.querySelectorAll(".sd-photos img").forEach(img=>{ img.onclick = ()=>openLightbox(img.src); });
+
+  const pdfBtn = box.querySelector("[data-pdf-name]");
+  if(pdfBtn){
+    pdfBtn.onclick = ()=> exportStudentPdf(name, statuses, student, detail, pdfBtn);
+  }
+}
+
+/* ─────────── PDF 보고서 출력 ─────────── */
+async function exportStudentPdf(name, statuses, student, detail, btn){
+  if(typeof html2pdf === "undefined"){ toast("PDF 도구를 불러오지 못했어요. 인터넷 연결을 확인해 주세요."); return; }
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.textContent = "보고서를 만드는 중... 잠시만요";
+
+  const today = new Date().toLocaleDateString("ko-KR");
+  const missionBlocks = detail.map(item=>{
+    const p = item.post;
+    let meta = "";
+    if(p){
+      if(p.subject) meta += `<div style="font-size:12px;color:#555;margin:2px 0;"><b>${esc(p.subjectLabel||"주제")}:</b> ${esc(p.subject)}</div>`;
+      if(p.creator) meta += `<div style="font-size:12px;color:#555;margin:2px 0;"><b>제작자:</b> ${esc(p.creator)} · <b>연도:</b> ${esc(p.year||"-")} · <b>유형:</b> ${esc(p.artType||"-")}</div>`;
+      else if(p.place) meta += `<div style="font-size:12px;color:#555;margin:2px 0;"><b>${esc(p.placeLabel||"정보")}:</b> ${esc(p.place)}</div>`;
+    }
+    const text = (p && p.text) ? `<div style="font-size:12.5px;line-height:1.7;white-space:pre-wrap;color:#222;margin-top:4px;">${esc(p.text)}</div>` : `<div style="font-size:12px;color:#888;">(사진/인증 과제)</div>`;
+    const photos = (item.photos && item.photos.length)
+      ? `<div style="margin-top:6px;">${item.photos.map(d=>`<img src="${d}" style="width:150px;height:150px;object-fit:cover;border-radius:8px;border:1px solid #ccc;margin:3px;display:inline-block;">`).join("")}</div>`
+      : "";
+    return `
+      <div style="page-break-inside:avoid;margin-bottom:16px;padding:12px 14px;border:1px solid #DCE6F0;border-radius:10px;background:#FBFDFF;">
+        <div style="font-family:'Jua',sans-serif;font-size:15px;color:#1B4B8F;margin-bottom:6px;">미션 ${item.index+1}. ${esc(item.mission)}</div>
+        ${meta}${text}${photos}
+      </div>`;
+  }).join("");
+
+  const reflectionBlock = (student && student.reflection && student.reflection.text)
+    ? `<div style="page-break-inside:avoid;margin-top:8px;padding:14px;border:2px solid #F5B301;border-radius:10px;background:#FFFBF0;">
+        <div style="font-family:'Jua',sans-serif;font-size:15px;color:#B37A00;margin-bottom:6px;">📝 방학 미션 빙고 소감문</div>
+        <div style="font-size:13px;line-height:1.8;white-space:pre-wrap;color:#222;">${esc(student.reflection.text)}</div>
+      </div>`
+    : "";
+
+  const wrapper = document.createElement("div");
+  wrapper.style.cssText = "width:720px;padding:32px;font-family:'Gowun Dodum',sans-serif;background:#fff;color:#222;";
+  wrapper.innerHTML = `
+    <div style="text-align:center;border-bottom:3px solid #E8493A;padding-bottom:14px;margin-bottom:20px;">
+      <div style="font-family:'Jua',sans-serif;font-size:26px;color:#E8493A;">🏆 여름방학 미션 빙고 완주 보고서</div>
+      <div style="font-size:15px;color:#1B4B8F;margin-top:8px;font-family:'Jua',sans-serif;">${esc(name)} 학생 · 9개 미션 전체 완주</div>
+      <div style="font-size:12px;color:#888;margin-top:4px;">발급일: ${today}</div>
+    </div>
+    ${missionBlocks}
+    ${reflectionBlock}
+    <div style="text-align:center;margin-top:24px;padding-top:14px;border-top:1px dashed #ccc;font-size:12px;color:#999;">
+      여름방학 미션 빙고를 모두 완성한 것을 축하합니다! 🎉
+    </div>`;
+
+  try{
+    await html2pdf().set({
+      margin: [10,8,10,8],
+      filename: `미션빙고_완주보고서_${name}.pdf`,
+      image: { type:"jpeg", quality:0.92 },
+      html2canvas: { scale:2, useCORS:true },
+      jsPDF: { unit:"mm", format:"a4", orientation:"portrait" },
+      pagebreak: { mode:["css","legacy"] }
+    }).from(wrapper).save();
+    toast(`${name} 완주 보고서를 저장했어요! 🏆`);
+  }catch(e){
+    toast("PDF 저장에 실패했어요. 다시 시도해 주세요.");
+    console.error(e);
+  }
+  btn.disabled = false;
+  btn.textContent = original;
+}
+
+/* ─────────── 시작 ─────────── */
 init();
 </script>
 </body>
