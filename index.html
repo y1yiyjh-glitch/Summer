@@ -969,52 +969,63 @@ async function exportStudentPdf(name, statuses, student, detail, btn){
     }
     const text = (p && p.text) ? `<div style="font-size:12.5px;line-height:1.7;white-space:pre-wrap;color:#222;margin-top:4px;">${esc(p.text)}</div>` : `<div style="font-size:12px;color:#888;">(사진/인증 과제)</div>`;
     const photos = (item.photos && item.photos.length)
-      ? `<div style="margin-top:6px;">${item.photos.map(d=>`<img src="${d}" style="width:150px;height:150px;object-fit:cover;border-radius:8px;border:1px solid #ccc;margin:3px;display:inline-block;">`).join("")}</div>`
+      ? `<div style="margin-top:6px;">${item.photos.map(d=>`<img src="${d}" style="width:130px;height:130px;object-fit:cover;border-radius:8px;border:1px solid #ccc;margin:3px;display:inline-block;vertical-align:top;">`).join("")}</div>`
       : "";
     return `
-      <div style="page-break-inside:avoid;margin-bottom:16px;padding:12px 14px;border:1px solid #DCE6F0;border-radius:10px;background:#FBFDFF;">
+      <div style="page-break-inside:avoid;break-inside:avoid;margin-bottom:14px;padding:12px 14px;border:1px solid #DCE6F0;border-radius:10px;background:#FBFDFF;">
         <div style="font-family:'Jua',sans-serif;font-size:15px;color:#1B4B8F;margin-bottom:6px;">미션 ${item.index+1}. ${esc(item.mission)}</div>
         ${meta}${text}${photos}
       </div>`;
   }).join("");
 
   const reflectionBlock = (student && student.reflection && student.reflection.text)
-    ? `<div style="page-break-inside:avoid;margin-top:8px;padding:14px;border:2px solid #F5B301;border-radius:10px;background:#FFFBF0;">
+    ? `<div style="page-break-inside:avoid;break-inside:avoid;margin-top:8px;padding:14px;border:2px solid #F5B301;border-radius:10px;background:#FFFBF0;">
         <div style="font-family:'Jua',sans-serif;font-size:15px;color:#B37A00;margin-bottom:6px;">📝 방학 미션 빙고 소감문</div>
         <div style="font-size:13px;line-height:1.8;white-space:pre-wrap;color:#222;">${esc(student.reflection.text)}</div>
       </div>`
     : "";
 
+  // 화면 밖에 실제로 붙여서 렌더링을 확실히 시킴 (안 붙이면 이미지가 안 그려져 페이지가 어긋남)
   const wrapper = document.createElement("div");
-  wrapper.style.cssText = "width:720px;padding:32px;font-family:'Gowun Dodum',sans-serif;background:#fff;color:#222;";
+  wrapper.style.cssText = "position:fixed;left:-9999px;top:0;width:720px;padding:28px;font-family:'Gowun Dodum',sans-serif;background:#fff;color:#222;box-sizing:border-box;";
   wrapper.innerHTML = `
-    <div style="text-align:center;border-bottom:3px solid #E8493A;padding-bottom:14px;margin-bottom:20px;">
-      <div style="font-family:'Jua',sans-serif;font-size:26px;color:#E8493A;">🏆 여름방학 미션 빙고 보고서</div>
+    <div style="text-align:center;border-bottom:3px solid #E8493A;padding-bottom:14px;margin-bottom:18px;">
+      <div style="font-family:'Jua',sans-serif;font-size:24px;color:#E8493A;">🏆 여름방학 미션 빙고 보고서</div>
       <div style="font-size:15px;color:#1B4B8F;margin-top:8px;font-family:'Jua',sans-serif;">${esc(name)} 학생 · ${bingoCount}빙고 완성 (미션 ${passedCount}개 통과)</div>
       <div style="font-size:12px;color:#888;margin-top:4px;">발급일: ${today}</div>
     </div>
     ${missionBlocks}
     ${reflectionBlock}
-    <div style="text-align:center;margin-top:24px;padding-top:14px;border-top:1px dashed #ccc;font-size:12px;color:#999;">
+    <div style="margin-top:22px;padding-top:12px;border-top:1px dashed #ccc;font-size:12px;color:#999;text-align:center;">
       여름방학 미션 빙고를 열심히 해낸 것을 축하합니다! 🎉
     </div>`;
+  document.body.appendChild(wrapper);
 
   try{
+    // 모든 이미지가 완전히 로드될 때까지 기다린 뒤 캡처 (누락 방지의 핵심)
+    const imgs = Array.from(wrapper.querySelectorAll("img"));
+    await Promise.all(imgs.map(img => (img.complete && img.naturalWidth)
+      ? Promise.resolve()
+      : new Promise(res => { img.onload = res; img.onerror = res; })));
+    await new Promise(r => setTimeout(r, 150)); // 렌더 안정화 여유
+
     await html2pdf().set({
-      margin: [10,8,10,8],
+      margin: [8,8,10,8],
       filename: `미션빙고_보고서_${name}.pdf`,
-      image: { type:"jpeg", quality:0.92 },
-      html2canvas: { scale:2, useCORS:true },
+      image: { type:"jpeg", quality:0.9 },
+      html2canvas: { scale:2, useCORS:true, backgroundColor:"#ffffff", windowWidth:776 },
       jsPDF: { unit:"mm", format:"a4", orientation:"portrait" },
-      pagebreak: { mode:["css","legacy"] }
+      pagebreak: { mode:["css","avoid-all"] }
     }).from(wrapper).save();
     toast(`${name} 보고서를 저장했어요! 🏆`);
   }catch(e){
     toast("PDF 저장에 실패했어요. 다시 시도해 주세요.");
     console.error(e);
+  }finally{
+    document.body.removeChild(wrapper);
+    btn.disabled = false;
+    btn.textContent = original;
   }
-  btn.disabled = false;
-  btn.textContent = original;
 }
 
 /* ─────────── 시작 ─────────── */
