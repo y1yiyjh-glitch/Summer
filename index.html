@@ -109,6 +109,48 @@
   }
   .bingo-count strong{color:var(--title-red);font-size:26px;}
 
+  /* ── 친구들 진행 상황 ── */
+  .friends-card{
+    margin-top:16px;
+    background:var(--white);
+    border-radius:18px;
+    padding:18px;
+    box-shadow:0 3px 10px rgba(27,75,143,.1);
+  }
+  .friends-card h3{
+    font-family:'Jua',sans-serif;color:var(--navy);font-size:17px;
+    margin-bottom:4px;text-align:center;
+  }
+  .friends-card .sub{font-size:12px;color:#8AA5BD;text-align:center;margin-bottom:14px;}
+  .friend-row{
+    display:flex;align-items:center;gap:10px;
+    padding:9px 8px;border-bottom:1px dashed #E3EEF7;
+  }
+  .friend-row:last-child{border-bottom:none;}
+  .friend-row.me{background:#FFF7E8;border-radius:10px;border-bottom:none;}
+  .friend-rank{
+    flex-shrink:0;width:28px;height:28px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Jua',sans-serif;font-size:13px;
+    background:#E3EEF7;color:var(--navy);
+  }
+  .friend-rank.top1{background:#FFE08A;color:#8A6A00;}
+  .friend-rank.top2{background:#E0E4E8;color:#5A6270;}
+  .friend-rank.top3{background:#F2C89A;color:#8A5A2B;}
+  .friend-name{flex:1;font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .friend-name b{font-family:'Jua',sans-serif;}
+  .friend-me-tag{font-size:11px;color:var(--title-red);font-family:'Jua',sans-serif;margin-left:4px;}
+  .friend-bar{flex:1.4;height:12px;background:#EEF4FB;border-radius:999px;overflow:hidden;max-width:130px;}
+  .friend-bar span{display:block;height:100%;background:linear-gradient(90deg,#8FD19E,var(--pass));border-radius:999px;transition:width .4s;}
+  .friend-score{flex-shrink:0;font-family:'Jua',sans-serif;font-size:13px;color:var(--navy);min-width:56px;text-align:right;}
+  .friends-toggle{
+    text-align:center;margin-top:10px;
+  }
+  .friends-toggle button{
+    background:none;border:none;color:var(--navy);
+    font-size:12.5px;text-decoration:underline;cursor:pointer;font-family:inherit;
+  }
+
   /* ── 빙고판 ── */
   .grid{
     display:grid;
@@ -553,7 +595,12 @@ function renderStudent(d, links){
     </div>
     <div class="bingo-count">지금까지 <strong>${bingo}</strong> 빙고! <span style="font-size:14px;">(통과한 미션 ${passedCount}개)</span></div>
     <div class="grid">${cells}</div>
-    ${reflectHtml}`;
+    ${reflectHtml}
+    <div class="friends-card" id="friendsCard">
+      <h3>🏅 우리 반 친구들</h3>
+      <div class="sub">친구들은 미션을 몇 개 완수했을까? 함께 도전해요!</div>
+      <div id="friendsList" style="font-size:13px;color:#8AA5BD;text-align:center;padding:10px 0;">불러오는 중...</div>
+    </div>`;
 
   document.getElementById("logoutBtn").onclick = () => {
     try{ localStorage.removeItem("bingo-name"); }catch(e){}
@@ -566,6 +613,66 @@ function renderStudent(d, links){
   });
   const reflectBtn = document.getElementById("reflectBtn");
   if(reflectBtn) reflectBtn.onclick = () => openReflection(d);
+
+  loadFriendsBoard();
+}
+
+/* ─────────── 친구들 진행 상황 보드 ─────────── */
+let friendsExpanded = false;
+async function loadFriendsBoard(){
+  const listBox = document.getElementById("friendsList");
+  if(!listBox) return;
+  let students = [];
+  try{
+    const snap = await db.collection("students").get();
+    students = snap.docs.map(doc => ({ name: doc.id, ...doc.data() }));
+  }catch(e){
+    listBox.innerHTML = `<span style="color:#B9C5D3;">친구들 정보를 불러오지 못했어요.</span>`;
+    return;
+  }
+  renderFriendsBoard(students);
+}
+
+function renderFriendsBoard(students){
+  const listBox = document.getElementById("friendsList");
+  if(!listBox) return;
+
+  // 이름 가나다순 정렬 (등수 없음)
+  const list = students.map(s=>{
+    const st = normalizeStatuses(s);
+    return { name: s.name, passed: st.filter(x=>x==="passed").length, bingo: countBingo(st) };
+  }).sort((a,b)=> a.name.localeCompare(b.name,"ko"));
+
+  if(!list.length){
+    listBox.innerHTML = `<span style="color:#B9C5D3;">아직 친구가 없어요. 미션을 시작한 친구가 여기 나타나요!</span>`;
+    return;
+  }
+
+  const shown = friendsExpanded ? list : list.slice(0,6);
+  const meIncluded = shown.some(r=>r.name===currentName);
+  let finalList = shown;
+  if(!friendsExpanded && !meIncluded){
+    const me = list.find(r=>r.name===currentName);
+    if(me) finalList = shown.concat([me]);
+  }
+
+  const rows = finalList.map(r=>{
+    const isMe = r.name === currentName;
+    const pct = Math.round(r.passed/9*100);
+    return `<div class="friend-row ${isMe?"me":""}">
+      <span class="friend-name"><b>${esc(r.name)}</b>${isMe?`<span class="friend-me-tag">나</span>`:""}</span>
+      <span class="friend-bar"><span style="width:${pct}%;"></span></span>
+      <span class="friend-score">${r.passed}개 완수</span>
+    </div>`;
+  }).join("");
+
+  const toggle = list.length > 6
+    ? `<div class="friends-toggle"><button id="friendsToggleBtn">${friendsExpanded ? "접기 ▲" : `전체 ${list.length}명 보기 ▼`}</button></div>`
+    : "";
+
+  listBox.innerHTML = rows + toggle;
+  const tBtn = document.getElementById("friendsToggleBtn");
+  if(tBtn) tBtn.onclick = ()=>{ friendsExpanded = !friendsExpanded; renderFriendsBoard(students); };
 }
 
 function openMission(i, statuses, links){
