@@ -695,10 +695,11 @@ async function renderTeacher(){
     ? students.map((s,si) => {
         const st = normalizeStatuses(s);
         const passedCount = st.filter(x=>x==="passed").length;
-        const allDone = passedCount === 9;
+        const bingoCount = countBingo(st);
+        const canReport = bingoCount >= 2;
         const dots = st.map(x => `<span class="dot ${x==="passed"?"p":x==="pending"?"w":x==="hold"?"h":""}" title="${x}"></span>`).join("");
         return `<div class="student-row clickable" data-student-idx="${si}" data-student-name="${esc(s.name)}">
-          <span><b>${esc(s.name)}</b> · ${countBingo(st)}빙고 (${passedCount}/9)${s.reflection && s.reflection.text ? " 📝" : ""}${allDone ? `<span class="complete-badge">완주 🏆</span>` : ""} <span class="chev">▸</span></span>
+          <span><b>${esc(s.name)}</b> · ${bingoCount}빙고 (${passedCount}/9)${s.reflection && s.reflection.text ? " 📝" : ""}${canReport ? `<span class="complete-badge">보고서 🏆</span>` : ""} <span class="chev">▸</span></span>
           <span class="dots">${dots}</span>
         </div>
         <div class="student-detail" id="detail-${si}" style="display:none;"></div>`;
@@ -745,7 +746,7 @@ async function renderTeacher(){
       <h3>📊 학생별 현황 (${students.length}명)</h3>
       <div style="font-size:11.5px;color:#8AA5BD;margin-bottom:8px;">
         ■ 초록=통과 · 노랑=확인 대기 · 빨강=보류 · 회색=미시작 (왼쪽부터 미션 1~9)<br>
-        👆 학생 이름을 누르면 통과한 과제물을 볼 수 있어요. 9개를 모두 완주한 학생은 보고서(PDF)로 저장할 수 있어요.
+        👆 학생 이름을 누르면 통과한 과제물을 볼 수 있어요. 2빙고 이상 완성한 학생은 보고서(PDF)로 저장할 수 있어요.
       </div>
       ${rowsHtml}
     </div>
@@ -911,7 +912,8 @@ function submissionInner(item){
 
 function renderStudentDetail(box, name, statuses, student, detail){
   const passedCount = statuses.filter(x=>x==="passed").length;
-  const allDone = passedCount === 9;
+  const bingoCount = countBingo(statuses);
+  const canReport = bingoCount >= 2;
 
   let html = detail.map(item=>`
     <div class="sd-mission">
@@ -932,10 +934,10 @@ function renderStudentDetail(box, name, statuses, student, detail){
     </div>`;
   }
 
-  if(allDone){
-    html += `<button class="pdf-btn" data-pdf-name="${esc(name)}">🏆 완주 보고서 PDF로 저장하기</button>`;
+  if(canReport){
+    html += `<button class="pdf-btn" data-pdf-name="${esc(name)}">🏆 미션 빙고 보고서 PDF로 저장하기</button>`;
   } else {
-    html += `<div class="sd-none" style="padding:8px 0 2px;">아직 9개를 모두 완주하지 않았어요. (통과 ${passedCount}/9)<br>모두 완주하면 보고서(PDF) 저장 버튼이 나타나요.</div>`;
+    html += `<div class="sd-none" style="padding:8px 0 2px;">아직 2빙고를 완성하지 않았어요. (현재 ${bingoCount}빙고)<br>2빙고 이상 완성하면 보고서(PDF) 저장 버튼이 나타나요.</div>`;
   }
 
   box.innerHTML = html;
@@ -955,6 +957,8 @@ async function exportStudentPdf(name, statuses, student, detail, btn){
   btn.textContent = "보고서를 만드는 중... 잠시만요";
 
   const today = new Date().toLocaleDateString("ko-KR");
+  const bingoCount = countBingo(statuses);
+  const passedCount = statuses.filter(x=>x==="passed").length;
   const missionBlocks = detail.map(item=>{
     const p = item.post;
     let meta = "";
@@ -985,26 +989,26 @@ async function exportStudentPdf(name, statuses, student, detail, btn){
   wrapper.style.cssText = "width:720px;padding:32px;font-family:'Gowun Dodum',sans-serif;background:#fff;color:#222;";
   wrapper.innerHTML = `
     <div style="text-align:center;border-bottom:3px solid #E8493A;padding-bottom:14px;margin-bottom:20px;">
-      <div style="font-family:'Jua',sans-serif;font-size:26px;color:#E8493A;">🏆 여름방학 미션 빙고 완주 보고서</div>
-      <div style="font-size:15px;color:#1B4B8F;margin-top:8px;font-family:'Jua',sans-serif;">${esc(name)} 학생 · 9개 미션 전체 완주</div>
+      <div style="font-family:'Jua',sans-serif;font-size:26px;color:#E8493A;">🏆 여름방학 미션 빙고 보고서</div>
+      <div style="font-size:15px;color:#1B4B8F;margin-top:8px;font-family:'Jua',sans-serif;">${esc(name)} 학생 · ${bingoCount}빙고 완성 (미션 ${passedCount}개 통과)</div>
       <div style="font-size:12px;color:#888;margin-top:4px;">발급일: ${today}</div>
     </div>
     ${missionBlocks}
     ${reflectionBlock}
     <div style="text-align:center;margin-top:24px;padding-top:14px;border-top:1px dashed #ccc;font-size:12px;color:#999;">
-      여름방학 미션 빙고를 모두 완성한 것을 축하합니다! 🎉
+      여름방학 미션 빙고를 열심히 해낸 것을 축하합니다! 🎉
     </div>`;
 
   try{
     await html2pdf().set({
       margin: [10,8,10,8],
-      filename: `미션빙고_완주보고서_${name}.pdf`,
+      filename: `미션빙고_보고서_${name}.pdf`,
       image: { type:"jpeg", quality:0.92 },
       html2canvas: { scale:2, useCORS:true },
       jsPDF: { unit:"mm", format:"a4", orientation:"portrait" },
       pagebreak: { mode:["css","legacy"] }
     }).from(wrapper).save();
-    toast(`${name} 완주 보고서를 저장했어요! 🏆`);
+    toast(`${name} 보고서를 저장했어요! 🏆`);
   }catch(e){
     toast("PDF 저장에 실패했어요. 다시 시도해 주세요.");
     console.error(e);
